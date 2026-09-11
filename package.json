@@ -1,0 +1,26 @@
+{
+  "name": "zalo-bot-ai",
+  "version": "1.0.0",
+  "description": "Zalo Chatbot AI powered by Google Gemini 3.6 Flash",
+  "main": "src/local-polling.js",
+  "scripts": {
+    "start": "node src/local-polling.js",
+    "dev": "node src/local-polling.js",
+    "test-connection": "node src/test-connection.js"
+  },
+  "keywords": [
+    "zalo",
+    "zalo-bot",
+    "gemini",
+    "ai-chatbot",
+    "vercel"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^16.4.7"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
