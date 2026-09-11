@@ -17,6 +17,9 @@ async function callApi(endpoint, body = {}) {
     });
 
     const data = await response.json();
+    if (!data.ok) {
+      console.error(`❌ Zalo API error [${endpoint}]:`, JSON.stringify(data));
+    }
     return data;
   } catch (error) {
     console.error(`❌ Lỗi gọi Zalo API [${endpoint}]:`, error.message);
