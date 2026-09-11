@@ -7,6 +7,7 @@ const {
   sendChatAction,
 } = require("./zalo");
 const { askGemini, clearHistory } = require("./gemini");
+const config = require("./config");
 
 let isRunning = true;
 let botInfo = null;
@@ -45,13 +46,26 @@ async function handleMessage(eventData) {
   }
 
   const chatId = msg.chat?.id || msg.from?.id;
+  const senderId = String(msg.from?.id || chatId || "");
   const senderName = msg.from?.display_name || "Bạn";
   const chatType = msg.chat?.chat_type || "PRIVATE";
   let rawText = msg.text.trim();
 
   console.log(
-    `\n📩 [${chatType}] Tin nhắn từ "${senderName}" (${chatId}): "${rawText}"`,
+    `\n📩 [${chatType}] Tin nhắn từ "${senderName}" (${senderId}): "${rawText}"`,
   );
+
+  // KIỂM TRA QUYỀN TRUY CẬP:
+  // Nếu là chat riêng 1-1 và không phải Admin -> Chặn không phản hồi tự do
+  const isAdmin = config.adminUserIds.includes(senderId);
+  if (chatType === "PRIVATE" && !isAdmin) {
+    console.log(`🚫 [BỊ CHẶN] Người dùng lạ "${senderName}" (${senderId}) nhắn tin riêng.`);
+    await sendMessage(
+      chatId,
+      "⚠️ Xin lỗi, Bot HTD Media hiện chỉ hoạt động trong các nhóm chat hoặc dành riêng cho Quản trị viên. Bạn vui lòng mời Bot vào nhóm để sử dụng nhé!",
+    );
+    return;
+  }
 
   // Xóa tên bot nếu được mention trong group (ví dụ: "@Bot HTD Media xin chào")
   if (botInfo && rawText.includes(botInfo.display_name)) {

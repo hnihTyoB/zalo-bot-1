@@ -59,10 +59,27 @@ module.exports = async (req, res) => {
   }
 
   const chatId = msg.chat?.id || msg.from?.id;
+  const senderId = String(msg.from?.id || chatId || '');
   const senderName = msg.from?.display_name || 'Bạn';
+  const chatType = msg.chat?.chat_type || 'PRIVATE';
   let rawText = msg.text.trim();
 
-  console.log(`📩 [Webhook] Nhận tin nhắn từ ${senderName} (${chatId}): "${rawText}"`);
+  console.log(`📩 [Webhook][${chatType}] Nhận tin nhắn từ ${senderName} (${senderId}): "${rawText}"`);
+
+  // KIỂM TRA QUYỀN TRUY CẬP:
+  // Nếu là chat riêng 1-1 và không phải Admin -> Chặn không phản hồi tự do
+  const isAdmin = config.adminUserIds.includes(senderId);
+  if (chatType === 'PRIVATE' && !isAdmin) {
+    console.log(`🚫 [BỊ CHẶN] Người dùng lạ ${senderName} (${senderId}) chat riêng.`);
+    await sendMessage(
+      chatId,
+      '⚠️ Xin lỗi, Bot HTD Media hiện chỉ hoạt động trong các nhóm chat hoặc dành riêng cho Quản trị viên. Bạn vui lòng mời Bot vào nhóm để sử dụng nhé!'
+    );
+    return res.status(200).json({ ok: true, blocked: true });
+  }
+
+  // Xóa tên bot nếu được mention trong nhóm
+  rawText = rawText.replace(/@?Bot HTD Media/gi, '').trim();
 
   // 4. Xử lý các lệnh cơ bản
   if (rawText === '/start') {
