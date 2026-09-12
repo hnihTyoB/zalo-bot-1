@@ -243,6 +243,11 @@ async function askGemini(chatId, userMessage) {
  * @returns {Promise<string>} Kết quả phân tích dạng text
  */
 async function askGeminiVision(chatId, userCaption, photoUrl) {
+  if (!photoUrl || typeof photoUrl !== 'string') {
+    console.warn('⚠️ askGeminiVision nhận được photoUrl không hợp lệ:', photoUrl);
+    return '⚠️ Không tìm thấy đường dẫn hình ảnh hợp lệ trong tin nhắn từ Zalo. Bạn vui lòng thử gửi lại ảnh nhé!';
+  }
+
   console.log(`🖼️ Đang tải ảnh phân tích từ Zalo: ${photoUrl.slice(0, 60)}...`);
 
   let imageBase64 = '';

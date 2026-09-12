@@ -1,4 +1,4 @@
-const { sendMessage, sendChatAction } = require('../src/zalo');
+const { sendMessage, sendChatAction, findImageUrl } = require('../src/zalo');
 const {
   askGemini,
   askGeminiVision,
@@ -112,12 +112,18 @@ module.exports = async (req, res) => {
   // ==========================================
   // TRƯỜNG HỢP 1: XỬ LÝ HÌNH ẢNH (MULTIMODAL)
   // ==========================================
-  const photoUrl = msg.photo || msg.url || msg.image_url || msg.attachment?.url;
+  const photoUrl = findImageUrl(data, eventData, msg);
   if (eventName === 'message.image.received' || photoUrl) {
-    let caption = (msg.caption || msg.text || msg.description || '').trim();
+    let caption = (msg?.caption || msg?.text || msg?.description || '').trim();
     caption = caption.replace(/@?Bot HTD Media/gi, '').trim();
 
-    console.log(`🖼️ [Webhook][${chatType}] Nhận ảnh từ ${senderName} (${senderId}). Câu hỏi/Chú thích: "${caption || '(không có câu hỏi)'}"`);
+    console.log(`🖼️ [Webhook][${chatType}] Nhận ảnh từ ${senderName} (${senderId}). URL: ${photoUrl ? photoUrl.slice(0, 50) : 'null'} | Câu hỏi: "${caption || '(không có câu hỏi)'}"`);
+
+    if (!photoUrl) {
+      console.warn('⚠️ Không tìm thấy URL ảnh trong payload:', JSON.stringify(eventData));
+      await sendMessage(chatId, '⚠️ Bot đã nhận được ảnh nhưng chưa lấy được liên kết tải từ Zalo. Bạn thử gửi lại ảnh nhé!');
+      return res.status(200).json({ ok: true, warning: 'No photo URL found' });
+    }
 
     if (chatType === 'GROUP') {
       await storage.pushGroupMessage(chatId, {
