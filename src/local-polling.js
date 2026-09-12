@@ -101,17 +101,21 @@ async function handleMessage(eventData) {
   }
 
   // 2. Xử lý bằng Gemini AI
-  try {
-    // Hiển thị trạng thái đang soạn tin nhắn...
-    await sendChatAction(chatId, "typing");
+  await sendChatAction(chatId, "typing");
+  const typingTimer = setInterval(() => {
+    sendChatAction(chatId, "typing").catch(() => {});
+  }, 2500);
 
+  try {
     console.log(`🤖 Đang xử lý câu trả lời AI...`);
     const aiReply = await askGemini(chatId, rawText);
+    clearInterval(typingTimer);
 
     // Gửi phản hồi lại cho người dùng qua Zalo
     await sendMessage(chatId, aiReply, "markdown");
     console.log(`✅ Đã gửi phản hồi thành công tới ${senderName}`);
   } catch (err) {
+    clearInterval(typingTimer);
     console.error(`❌ Lỗi xử lý tin nhắn:`, err.message);
     await sendMessage(
       chatId,

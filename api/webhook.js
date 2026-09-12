@@ -104,12 +104,19 @@ module.exports = async (req, res) => {
   }
 
   // 5. Gửi sang Gemini AI & phản hồi lại
+  // Duy trì trạng thái typing liên tục (Zalo tự tắt typing sau ~4s nếu không gửi lại)
+  await sendChatAction(chatId, 'typing');
+  const typingTimer = setInterval(() => {
+    sendChatAction(chatId, 'typing').catch(() => {});
+  }, 2500);
+
   try {
-    await sendChatAction(chatId, 'typing');
     const aiReply = await askGemini(chatId, rawText);
+    clearInterval(typingTimer);
     const zaloRes = await sendMessage(chatId, aiReply, 'markdown');
     return res.status(200).json({ ok: true, zalo: zaloRes });
   } catch (err) {
+    clearInterval(typingTimer);
     console.error('❌ Lỗi xử lý Webhook AI:', err.message);
     await sendMessage(chatId, '⚠️ Đã xảy ra lỗi khi xử lý câu hỏi của bạn. Vui lòng thử lại!');
     return res.status(200).json({ ok: false, error: err.message });

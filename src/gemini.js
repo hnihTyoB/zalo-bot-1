@@ -5,6 +5,10 @@ const config = require('./config');
 const conversations = new Map();
 const MAX_HISTORY_MESSAGES = 10;
 
+// Bộ nhớ tạm lưu các cặp model+key bị lỗi (Circuit Breaker) để không gọi lại trong thời gian chờ
+// Key: `${model}_${keySuffix}`, Value: timestamp hết hạn
+const failedTargets = new Map();
+
 // Con trỏ luân chuyển API Key (Round-robin)
 let currentKeyIndex = 0;
 
@@ -32,6 +36,28 @@ function clearHistory(chatId) {
 }
 
 /**
+ * Kiểm tra xem cặp model + key có đang bị tạm khóa (cooldown) không
+ */
+function isInCooldown(model, key) {
+  const id = `${model}_${key.slice(-6)}`;
+  const expiry = failedTargets.get(id);
+  if (!expiry) return false;
+  if (Date.now() > expiry) {
+    failedTargets.delete(id);
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Ghi nhận cặp model + key bị lỗi và tạm ngưng trong 60 giây
+ */
+function markCooldown(model, key, durationMs = 60000) {
+  const id = `${model}_${key.slice(-6)}`;
+  failedTargets.set(id, Date.now() + durationMs);
+}
+
+/**
  * Lấy danh sách API Keys có sẵn
  */
 function getApiKeys() {
@@ -43,7 +69,6 @@ function getApiKeys() {
 
 /**
  * Lấy danh sách API Keys theo thứ tự xoay vòng (Round-robin)
- * Giúp cân bằng tải đều giữa các key và tự động chuyển đổi qua lại
  */
 function getOrderedApiKeys() {
   const keys = getApiKeys();
@@ -70,7 +95,7 @@ function maskKey(key) {
 
 /**
  * Gửi tin nhắn đến AI và nhận câu trả lời
- * Tự động chuyển đổi giữa nhiều API Key và Model dự phòng
+ * Tối ưu hóa tốc độ cao nhất (low latency), tắt thinking overhead, tự động failover
  * @param {string|number} chatId - ID cuộc trò chuyện
  * @param {string} userMessage - Nội dung tin nhắn người dùng
  * @returns {Promise<string>} - Nội dung phản hồi từ AI
@@ -105,7 +130,6 @@ async function askGemini(chatId, userMessage) {
       if (item.role !== lastRole) {
         cleanContents.push(item);
       } else if (item.role === 'user') {
-        // Nếu có 2 lượt user liên tiếp, lấy tin nhắn mới nhất
         cleanContents[cleanContents.length - 1] = item;
       }
     }
@@ -125,29 +149,39 @@ async function askGemini(chatId, userMessage) {
     contents: cleanContents,
     generationConfig: {
       temperature: 0.7,
-      maxOutputTokens: 1000
+      maxOutputTokens: 800,
+      thinkingConfig: {
+        thinkingBudget: 0 // Tắt chế độ suy nghĩ nội bộ để phản hồi trực tiếp siêu tốc
+      }
     }
   };
 
-  // Danh sách model ưu tiên theo thứ tự
+  // Ưu tiên các model có tốc độ phản hồi nhanh nhất và hạn mức quota dồi dào
+  // Loại trừ gemini-3.6-flash vì bị kịch trần hạn mức preview
+  const primary = config.geminiModel && config.geminiModel !== 'gemini-3.6-flash' ? config.geminiModel : null;
   const candidateModels = [
     ...new Set([
-      config.geminiModel,
-      'gemini-flash-latest',
-      'gemini-3.5-flash',
-      'gemini-flash-lite-latest',
-      'gemini-3.7-flash'
+      'gemini-3.5-flash',      // Nhanh nhất (~1.9s)
+      primary,                 // Model cấu hình
+      'gemini-flash-latest',   // Model ổn định
+      'gemini-3.5-flash-lite', // Model nhẹ
+      'gemini-3.7-flash'       // Dự phòng
     ].filter(Boolean))
   ];
 
-  // Danh sách key theo thứ tự xoay vòng
   const orderedKeys = getOrderedApiKeys();
 
   // Thử lần lượt qua các model và các API key
   for (const model of candidateModels) {
     for (const apiKey of orderedKeys) {
+      // Bỏ qua ngay lập tức nếu cặp model + key này vừa bị lỗi trong 60 giây qua
+      if (isInCooldown(model, apiKey)) {
+        continue;
+      }
+
       const keyLabel = maskKey(apiKey);
       try {
+        const tStart = Date.now();
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
         const response = await fetch(url, {
           method: 'POST',
@@ -159,8 +193,9 @@ async function askGemini(chatId, userMessage) {
 
         if (!response.ok) {
           const errorText = await response.text();
-          console.warn(`⚠️ [Model: ${model} | Key: ${keyLabel}] Mã ${response.status}: ${errorText.slice(0, 100)}`);
-          // Nếu lỗi (429 quota, 403, 404, 503), tự động thử key tiếp theo hoặc model tiếp theo
+          console.warn(`⚠️ [Model: ${model} | Key: ${keyLabel}] Lỗi ${response.status}: ${errorText.slice(0, 100)}`);
+          // Đánh dấu cooldown 60 giây để không tốn thời gian gọi lại cặp này
+          markCooldown(model, apiKey, 60000);
           continue;
         }
 
@@ -178,10 +213,12 @@ async function askGemini(chatId, userMessage) {
           parts: [{ text: replyText }]
         });
 
-        console.log(`✅ Phản hồi AI thành công [Model: ${model} | Key: ${keyLabel}]`);
+        const elapsed = Date.now() - tStart;
+        console.log(`✅ Phản hồi AI siêu tốc (${elapsed}ms) [Model: ${model} | Key: ${keyLabel}]`);
         return replyText;
       } catch (err) {
         console.warn(`⚠️ Lỗi kết nối tới [Model: ${model} | Key: ${keyLabel}]:`, err.message);
+        markCooldown(model, apiKey, 30000);
       }
     }
   }
