@@ -112,10 +112,12 @@ module.exports = async (req, res) => {
   // ==========================================
   // TRƯỜNG HỢP 1: XỬ LÝ HÌNH ẢNH (MULTIMODAL)
   // ==========================================
-  if (eventName === 'message.image.received' && msg.photo) {
-    const photoUrl = msg.photo;
-    const caption = (msg.caption || '').trim();
-    console.log(`🖼️ [Webhook][${chatType}] Nhận ảnh từ ${senderName} (${senderId}): "${caption}"`);
+  const photoUrl = msg.photo || msg.url || msg.image_url || msg.attachment?.url;
+  if (eventName === 'message.image.received' || photoUrl) {
+    let caption = (msg.caption || msg.text || msg.description || '').trim();
+    caption = caption.replace(/@?Bot HTD Media/gi, '').trim();
+
+    console.log(`🖼️ [Webhook][${chatType}] Nhận ảnh từ ${senderName} (${senderId}). Câu hỏi/Chú thích: "${caption || '(không có câu hỏi)'}"`);
 
     if (chatType === 'GROUP') {
       await storage.pushGroupMessage(chatId, {

@@ -81,11 +81,19 @@ async function handleMessage(eventData) {
   // ==========================================
   // TRƯỜNG HỢP 1: XỬ LÝ HÌNH ẢNH (MULTIMODAL)
   // ==========================================
-  if (eventName === "message.image.received" && msg.photo) {
-    const photoUrl = msg.photo;
-    const caption = (msg.caption || "").trim();
+  const photoUrl = msg.photo || msg.url || msg.image_url || msg.attachment?.url;
+  if (eventName === "message.image.received" || photoUrl) {
+    let caption = (msg.caption || msg.text || msg.description || "").trim();
 
-    console.log(`\n🖼️ [${chatType}] Nhận ảnh từ "${senderName}" (${senderId}): "${caption}"`);
+    // Xóa tên Bot nếu được mention trong chú thích
+    if (botInfo && caption.includes(botInfo.display_name)) {
+      caption = caption
+        .replace(new RegExp(`@?${botInfo.display_name}`, "gi"), "")
+        .trim();
+    }
+    caption = caption.replace(/@?Bot HTD Media/gi, "").trim();
+
+    console.log(`\n🖼️ [${chatType}] Nhận ảnh từ "${senderName}" (${senderId}). Câu hỏi/Chú thích: "${caption || '(không có câu hỏi)'}"`);
 
     // Lưu vào bộ đệm nhóm nếu là nhóm chat
     if (chatType === "GROUP") {

@@ -265,8 +265,9 @@ async function askGeminiVision(chatId, userCaption, photoUrl) {
     return '⚠️ Không thể tải hình ảnh của bạn từ máy chủ Zalo. Vui lòng thử gửi lại ảnh nhé!';
   }
 
-  const promptText = userCaption && userCaption.trim()
-    ? userCaption.trim()
+  const cleanCaption = (userCaption || '').trim();
+  const promptText = cleanCaption
+    ? `Dựa trên hình ảnh được cung cấp, hãy tập trung giải quyết và trả lời chính xác yêu cầu sau của tôi: "${cleanCaption}". Trả lời bằng tiếng Việt tự nhiên, trực tiếp và súc tích.`
     : 'Hãy phân tích chi tiết bức ảnh này: mô tả nội dung, trích xuất văn bản (OCR) hoặc số liệu, hóa đơn nếu có, và trả lời bằng tiếng Việt tự nhiên, rõ ràng.';
 
   const payload = {
