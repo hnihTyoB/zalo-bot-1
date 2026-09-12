@@ -6,14 +6,15 @@ const {
   sendMessage,
   sendChatAction,
 } = require("./zalo");
-const { askGemini, clearHistory } = require("./gemini");
+const { askGemini, askGeminiVision, summarizeGroupChat, clearHistory } = require("./gemini");
+const storage = require("./storage");
 const config = require("./config");
 
 let isRunning = true;
 let botInfo = null;
 
 // Lệnh hỗ trợ
-const HELP_TEXT = `🤖 **HƯỚNG DẪN SỬ DỤNG BOT HTD MEDIA**
+const HELP_TEXT = `🤖 **HƯỚNG DẪN SỬ DỤNG BOT HTD MEDIA (AI ĐA NĂNG)**
 
 Tôi là trợ lý AI thông minh của HTD Media, luôn sẵn sàng hỗ trợ và giải đáp thắc mắc của bạn.
 
@@ -21,13 +22,15 @@ Tôi là trợ lý AI thông minh của HTD Media, luôn sẵn sàng hỗ trợ 
 - \`/start\` : Bắt đầu và xem lời chào.
 - \`/help\` : Xem hướng dẫn sử dụng này.
 - \`/reset\` : Xóa ngữ cảnh của cuộc trò chuyện hiện tại để bắt đầu chủ đề mới.
+- \`/summary\` : (Dành cho Nhóm) Tóm tắt các nội dung thảo luận gần nhất, các quyết định và việc cần làm.
 
-💬 **Cách trò chuyện:**
-- **Trong Chat 1-1:** Bạn chỉ cần gõ bất kỳ câu hỏi nào (toán học, lập trình, văn bản, kiến thức, dịch thuật...).
-- **Trong Nhóm Chat:** Hãy gõ \`@Bot HTD Media\` hoặc **Trả lời** tin nhắn của Bot để tôi trả lời bạn nhé!`;
+💬 **Khả năng nổi bật:**
+- **Đọc & Phân tích hình ảnh:** Bạn chỉ cần gửi ảnh (hóa đơn, bài tập, sơ đồ, tài liệu) kèm câu hỏi, tôi sẽ phân tích và giải đáp ngay.
+- **Trong Chat 1-1:** Trao đổi trực tiếp mọi chủ đề (dành cho Quản trị viên).
+- **Trong Nhóm Chat:** Hãy gõ \`@Bot HTD Media\` hoặc **Trả lời** tin nhắn của Bot để tôi hỗ trợ nhé!`;
 
 /**
- * Xử lý từng tin nhắn đến
+ * Xử lý từng tin nhắn đến (văn bản hoặc hình ảnh)
  */
 async function handleMessage(eventData) {
   if (!eventData) return;
@@ -35,8 +38,7 @@ async function handleMessage(eventData) {
   const eventName = eventData.event_name;
   const msg = eventData.message;
 
-  // Chỉ xử lý tin nhắn văn bản
-  if (eventName !== "message.text.received" || !msg || !msg.text) {
+  if (!msg) {
     if (eventName === "message.unsupported.received") {
       console.log(
         "ℹ️ Nhận được tin nhắn từ nhóm đối tượng đặc biệt (được bảo vệ quyền riêng tư).",
@@ -49,15 +51,10 @@ async function handleMessage(eventData) {
   const senderId = String(msg.from?.id || chatId || "");
   const senderName = msg.from?.display_name || "Bạn";
   const chatType = msg.chat?.chat_type || "PRIVATE";
-  let rawText = msg.text.trim();
-
-  console.log(
-    `\n📩 [${chatType}] Tin nhắn từ "${senderName}" (${senderId}): "${rawText}"`,
-  );
+  const isAdmin = config.adminUserIds.includes(senderId);
 
   // KIỂM TRA QUYỀN TRUY CẬP:
   // Nếu là chat riêng 1-1 và không phải Admin -> Chặn không phản hồi tự do
-  const isAdmin = config.adminUserIds.includes(senderId);
   if (chatType === "PRIVATE" && !isAdmin) {
     console.log(`🚫 [BỊ CHẶN] Người dùng lạ "${senderName}" (${senderId}) nhắn tin riêng.`);
     await sendMessage(
@@ -67,6 +64,65 @@ async function handleMessage(eventData) {
     return;
   }
 
+  // ==========================================
+  // TRƯỜNG HỢP 1: XỬ LÝ HÌNH ẢNH (MULTIMODAL)
+  // ==========================================
+  if (eventName === "message.image.received" && msg.photo) {
+    const photoUrl = msg.photo;
+    const caption = (msg.caption || "").trim();
+
+    console.log(`\n🖼️ [${chatType}] Nhận ảnh từ "${senderName}" (${senderId}): "${caption}"`);
+
+    // Lưu vào bộ đệm nhóm nếu là nhóm chat
+    if (chatType === "GROUP") {
+      await storage.pushGroupMessage(chatId, {
+        senderName,
+        senderId,
+        text: `[Đã gửi 1 hình ảnh] ${caption}`,
+        time: new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })
+      });
+    }
+
+    await sendChatAction(chatId, "typing");
+    const typingTimer = setInterval(() => {
+      sendChatAction(chatId, "typing").catch(() => {});
+    }, 2500);
+
+    try {
+      console.log("🤖 Đang gửi ảnh sang Gemini Multimodal Vision...");
+      const aiReply = await askGeminiVision(chatId, caption, photoUrl);
+      clearInterval(typingTimer);
+
+      await sendMessage(chatId, aiReply, "markdown");
+      console.log(`✅ Đã gửi phân tích ảnh thành công tới ${senderName}`);
+    } catch (err) {
+      clearInterval(typingTimer);
+      console.error(`❌ Lỗi xử lý ảnh:`, err.message);
+      await sendMessage(chatId, "⚠️ Đã xảy ra lỗi khi phân tích hình ảnh. Vui lòng thử lại!");
+    }
+    return;
+  }
+
+  // ==========================================
+  // TRƯỜNG HỢP 2: XỬ LÝ TIN NHẮN VĂN BẢN
+  // ==========================================
+  if (eventName !== "message.text.received" || !msg.text) {
+    return;
+  }
+
+  let rawText = msg.text.trim();
+  console.log(`\n📩 [${chatType}] Tin nhắn từ "${senderName}" (${senderId}): "${rawText}"`);
+
+  // Lưu tin nhắn vào bộ đệm của nhóm
+  if (chatType === "GROUP") {
+    await storage.pushGroupMessage(chatId, {
+      senderName,
+      senderId,
+      text: rawText,
+      time: new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })
+    });
+  }
+
   // Xóa tên bot nếu được mention trong group (ví dụ: "@Bot HTD Media xin chào")
   if (botInfo && rawText.includes(botInfo.display_name)) {
     rawText = rawText
@@ -74,9 +130,41 @@ async function handleMessage(eventData) {
       .trim();
   }
 
-  // 1. Xử lý các lệnh hệ thống
+  // 1. Lệnh tóm tắt thảo luận nhóm (/summary)
+  if (rawText.startsWith("/summary") || rawText.toLowerCase().includes("tóm tắt")) {
+    await sendChatAction(chatId, "typing");
+    const typingTimer = setInterval(() => {
+      sendChatAction(chatId, "typing").catch(() => {});
+    }, 2500);
+
+    try {
+      console.log(`📊 Đang trích xuất tin nhắn nhóm để tạo bản tóm tắt...`);
+      const recentMessages = await storage.getGroupMessages(chatId);
+      if (recentMessages.length < 2) {
+        clearInterval(typingTimer);
+        await sendMessage(
+          chatId,
+          "⚠️ Hiện chưa có đủ tin nhắn thảo luận gần đây trong nhóm để tóm tắt. Các thành viên hãy trò chuyện thêm nhé!",
+        );
+        return;
+      }
+
+      const summary = await summarizeGroupChat(recentMessages);
+      clearInterval(typingTimer);
+      await sendMessage(chatId, summary, "markdown");
+      console.log(`✅ Đã gửi bản tóm tắt thảo luận nhóm thành công`);
+      return;
+    } catch (err) {
+      clearInterval(typingTimer);
+      console.error(`❌ Lỗi tóm tắt nhóm:`, err.message);
+      await sendMessage(chatId, "⚠️ Đã có lỗi xảy ra khi tạo tóm tắt. Vui lòng thử lại!");
+      return;
+    }
+  }
+
+  // 2. Các lệnh hệ thống khác
   if (rawText === "/start") {
-    const welcome = `Xin chào **${senderName}**! 👋\n\nTôi là **${botInfo?.display_name || "Bot HTD Media"}**, trợ lý AI thông minh chạy trên nền tảng Zalo.\n\nBạn có thể hỏi tôi bất kỳ điều gì, hoặc gõ \`/help\` để xem các lệnh hướng dẫn!`;
+    const welcome = `Xin chào **${senderName}**! 👋\n\nTôi là **${botInfo?.display_name || "Bot HTD Media"}**, trợ lý AI thông minh chạy trên nền tảng Zalo.\n\nBạn có thể hỏi tôi bất kỳ điều gì, gửi ảnh để tôi phân tích, hoặc gõ \`/help\` để xem các lệnh hướng dẫn!`;
     await sendMessage(chatId, welcome);
     return;
   }
@@ -87,7 +175,7 @@ async function handleMessage(eventData) {
   }
 
   if (rawText === "/reset" || rawText === "/clear") {
-    clearHistory(chatId);
+    await clearHistory(chatId);
     await sendMessage(
       chatId,
       "🧹 Đã xóa lịch sử trò chuyện thành công! Giờ bạn có thể bắt đầu một chủ đề hoàn toàn mới.",
@@ -100,7 +188,7 @@ async function handleMessage(eventData) {
     return;
   }
 
-  // 2. Xử lý bằng Gemini AI
+  // 3. Xử lý bằng Gemini AI
   await sendChatAction(chatId, "typing");
   const typingTimer = setInterval(() => {
     sendChatAction(chatId, "typing").catch(() => {});
@@ -129,7 +217,7 @@ async function handleMessage(eventData) {
  */
 async function startPolling() {
   console.log("\n======================================================");
-  console.log("🚀 KHỞI ĐỘNG ZALO BOT AI TRÊN CHẾ ĐỘ LONG POLLING");
+  console.log("🚀 KHỞI ĐỘNG ZALO BOT AI TRÊN CHẾ ĐỘ LONG POLLING (NÂNG CẤO)");
   console.log("======================================================");
 
   try {
@@ -157,7 +245,7 @@ async function startPolling() {
     }
 
     console.log(
-      "🟢 Bot đã sẵn sàng nhận tin nhắn! Hãy nhắn tin cho bot trên Zalo để thử nghiệm.",
+      "🟢 Bot đã sẵn sàng nhận tin nhắn & hình ảnh! Hãy nhắn tin cho bot trên Zalo để thử nghiệm.",
     );
     console.log("(Nhấn Ctrl + C để dừng bot bất cứ lúc nào)\n");
 

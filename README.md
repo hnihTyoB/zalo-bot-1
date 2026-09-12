@@ -1,18 +1,27 @@
-# 🤖 Zalo Bot AI (Bot HTD Media) - Tích Hợp Google Gemini 3.6 Flash
+# 🤖 Zalo Bot AI (Bot HTD Media) - Trợ Lý Đa Năng Thông Minh
 
-Dự án Zalo Chatbot AI hoàn chỉnh viết bằng **Node.js**, kết nối trực tiếp với **Google Gemini AI**.
-Hỗ trợ cả chế độ **Local Polling** để chạy thử ngay trên máy tính và chế độ **Vercel Serverless Webhook** để đưa lên mạng hoàn toàn miễn phí 24/7.
+Dự án Zalo Chatbot AI cao cấp viết bằng **Node.js**, tích hợp mô hình **Google Gemini Flash Multimodal**.
+Hỗ trợ cả chế độ **Local Polling** để chạy thử ngay trên máy tính và chế độ **Vercel Serverless Webhook** để chạy tự động 24/7 hoàn toàn miễn phí.
 
 ---
 
-## 🌟 Tính Năng Nổi Bật
+## 🌟 Tính Năng Nâng Cao Vừa Bổ Sung
 
-- ⚡ **Model Gemini 3.6 Flash**: Tốc độ xử lý cực nhanh, thông minh, hỗ trợ tiếng Việt mượt mà.
-- 🧠 **Ghi nhớ ngữ cảnh hội thoại**: Bot ghi nhớ các câu hỏi trước đó của từng người dùng (`chat_id`) để trò chuyện liền mạch.
-- ⌨️ **Hiệu ứng gõ phím (`typing`)**: Hiển thị trạng thái đang soạn tin nhắn trên Zalo trong lúc AI xử lý.
-- 📱 **Hỗ trợ Rich Text**: Định dạng in đậm, in nghiêng, trích dẫn danh sách Markdown.
-- 👥 **Hoạt động trong Group Zalo**: Sẵn sàng trả lời khi được thành viên `@Bot HTD Media` hoặc Reply tin nhắn.
-- 🚀 **Deploy Free 100%**: Sẵn sàng triển khai lên **Vercel** không tốn chi phí, không lo bot bị "ngủ" (sleep).
+1. 👁️ **Thị Giác AI Đa Phương Tiện (Multimodal Vision)**:
+   - Tự động nhận diện khi người dùng gửi hình ảnh (`message.image.received`).
+   - Phân tích chi tiết hóa đơn, bảng báo giá, giải bài toán, đọc chữ trong ảnh (OCR), nhận diện vật thể/nhân vật.
+   - Phản hồi văn bản Markdown súc tích (không gửi voice/ảnh không cần thiết).
+2. 📊 **Quản Trị & Tóm Tắt Thảo Luận Nhóm (`/summary`)**:
+   - Lưu trữ bộ đệm các tin nhắn gần nhất trong Nhóm chat Zalo.
+   - Khi gõ lệnh `/summary` hoặc `@Bot tóm tắt`: AI tự động bóc tách **Chủ đề chính**, **Các quyết định đã thống nhất**, và **Danh sách việc cần làm (Action Items)** gắn với từng người.
+3. 💾 **Bộ Nhớ Bền Vững (Persistent Long-Term Memory)**:
+   - Tích hợp **Upstash Redis Serverless REST API** để lưu giữ ngữ cảnh hội thoại vĩnh viễn trên Cloud Vercel.
+   - Tự động chuyển đổi về bộ nhớ RAM (In-memory fallback) khi chạy thử nghiệm trên máy local.
+4. 🎨 **Hỗ Trợ Định Dạng Zalo Rich Text Đa Màu Sắc**:
+   - Tận dụng hệ thống màu sắc Zalo: `{green}`, `{orange}`, `{red}`, `{big}`, `{underline}` giúp tin nhắn nổi bật, trực quan.
+5. 🛡️ **Bảo Mật Thương Hiệu & Circuit Breaker**:
+   - Nhận diện 100% là "Bot HTD Media".
+   - Luân chuyển nhiều API Key (Round-robin) và Circuit Breaker tự ngắt kết nối lỗi 60s, không bao giờ để bot bị gián đoạn.
 
 ---
 
@@ -21,80 +30,72 @@ Hỗ trợ cả chế độ **Local Polling** để chạy thử ngay trên máy
 ```text
 zalo-bot/
 ├── api/
-│   └── webhook.js          # Serverless Handler cho Vercel (Production)
+│   └── webhook.js          # Serverless Handler cho Vercel (Hỗ trợ Text, Ảnh, /summary)
 ├── scripts/
-│   ├── set-webhook.js      # Script kích hoạt Webhook sau khi deploy
-│   └── delete-webhook.js   # Script gỡ Webhook để quay lại chạy Polling
+│   ├── set-webhook.js      # Script kích hoạt Webhook sau khi deploy Vercel
+│   └── verify-all.js       # Script kiểm thử tự động toàn diện các tính năng
 ├── src/
 │   ├── config.js           # Nạp biến môi trường từ .env
-│   ├── gemini.js           # Kết nối Gemini 3.6 Flash & quản lý bộ nhớ
-│   ├── zalo.js             # Wrapper gọi Zalo Bot API
+│   ├── storage.js          # Quản lý lưu trữ Upstash Redis & RAM fallback
+│   ├── gemini.js           # Xử lý Gemini Multi-turn, Vision & Summarization
+│   ├── zalo.js             # Wrapper gọi Zalo Bot API & Styles
 │   ├── local-polling.js    # Chạy bot ở chế độ Polling trên máy local
-│   └── test-connection.js  # Script kiểm tra token & kết nối
+│   └── test-connection.js  # Script kiểm tra token & kết nối Zalo
+├── markdown/               # Toàn bộ tài liệu chính thức từ Zalo Bot Platform
 ├── .env                    # Lưu API keys (bảo mật)
-├── .env.example            # Mẫu cấu hình
+├── .env.example            # Mẫu cấu hình mở rộng
 ├── package.json
 └── vercel.json             # Cấu hình routing Vercel
 ```
 
 ---
 
-## 🚀 Hướng Dẫn Sử Dụng
+## 🚀 Hướng Dẫn Sử Dụng Nhanh
 
-### Bước 1: Cài đặt thư viện
+### Bước 1: Cài đặt và Kiểm tra
 ```bash
 npm install
+npm test
 ```
+> Lệnh `npm test` sẽ chạy kiểm thử tự động toàn bộ: Lưu trữ Storage, Phân tích ảnh Pikachu bằng Gemini Vision, Tóm tắt nhóm và Rich Text.
 
-### Bước 2: Kiểm tra kết nối API
-Chạy lệnh kiểm tra để chắc chắn Bot Zalo và Gemini API hoạt động tốt:
-```bash
-npm run test-connection
-```
-
-### Bước 3: Chạy Bot trên máy tính (Chế độ Local Polling)
+### Bước 2: Chạy Bot trên máy tính (Local Polling)
 ```bash
 npm run dev
 ```
-> Khi màn hình hiện `🟢 Bot đã sẵn sàng nhận tin nhắn!`, bạn mở ứng dụng Zalo trên điện thoại, tìm bot **Bot HTD Media** (`bot.IxOTmsiU`) và nhắn tin trò chuyện!
+> Mở Zalo trên điện thoại, tìm bot **Bot HTD Media** (`@bot.IxOTmsiU`) và gửi tin nhắn hoặc hình ảnh bất kỳ để trải nghiệm!
 
 ---
 
-## 🌐 Hướng Dẫn Deploy Lên Vercel (Miễn Phí 100% - 24/7)
+## 🌐 Cấu Hình Biến Môi Trường (.env)
 
-Khi bạn muốn bot chạy liên tục trên mạng mà không cần bật máy tính:
-
-### 1. Đưa mã nguồn lên GitHub
-Tạo một repository mới trên GitHub (nên để Private để bảo mật) và đẩy code lên:
-```bash
-git init
-git add .
-git commit -m "Initial Zalo Bot AI"
-git branch -M main
-git remote add origin <URL_GITHUB_REPO_CỦA_BẠN>
-git push -u origin main
-```
-
-### 2. Import vào Vercel
-1. Truy cập [Vercel](https://vercel.com/) và đăng nhập bằng GitHub.
-2. Chọn **Add New...** -> **Project** -> Chọn repository vừa tạo.
-3. Trong mục **Environment Variables**, thêm các biến sau:
-   - `ZALO_BOT_TOKEN`: Token của bot Zalo
-   - `GEMINI_API_KEY`: API Key của Gemini
-   - `GEMINI_MODEL`: `gemini-3.6-flash`
-   - `WEBHOOK_SECRET_TOKEN`: Token bí mật (ví dụ: `htd_secret_token_2026_secure`)
-4. Nhấn **Deploy**. Bạn sẽ nhận được một domain miễn phí dạng `https://ten-du-an.vercel.app`.
-
-### 3. Kích hoạt Webhook Zalo
-Sau khi Vercel deploy xong, bạn mở terminal trên máy tính và chạy lệnh:
-```bash
-node scripts/set-webhook.js https://ten-du-an.vercel.app/api/webhook
-```
-Hệ thống Zalo sẽ gửi xác thực đến server Vercel và kích hoạt bot 24/7!
+| Tên biến | Bắt buộc | Mô tả |
+| :--- | :--- | :--- |
+| `ZALO_BOT_TOKEN` | **Có** | Token Zalo Bot lấy từ Zalo Bot Creator |
+| `GEMINI_API_KEYS` | **Có** | Danh sách Google Gemini API Keys (phân tách bằng dấu phẩy) |
+| `GEMINI_MODEL` | Không | Mặc định `gemini-flash-latest` hoặc `gemini-3.5-flash` |
+| `ADMIN_USER_ID` | Không | ID Zalo của Admin được quyền chat riêng 1-1 với Bot |
+| `UPSTASH_REDIS_REST_URL` | Không | (Khuyên dùng trên Vercel) REST URL từ Upstash Redis Serverless |
+| `UPSTASH_REDIS_REST_TOKEN` | Không | REST Token từ Upstash Redis Serverless |
 
 ---
 
-## 📌 Các Lệnh Của Bot Trên Zalo
-- `/start`: Giới thiệu bot và lời chào.
-- `/help`: Xem hướng dẫn sử dụng.
-- `/reset`: Xóa ngữ cảnh/trí nhớ cuộc trò chuyện hiện tại để bắt đầu chủ đề mới.
+## 📌 Các Lệnh Trò Chuyện Trên Zalo
+
+- `/start`: Giới thiệu bot và các khả năng nổi bật.
+- `/help`: Xem hướng dẫn sử dụng chi tiết.
+- `/reset`: Xóa lịch sử trò chuyện của cuộc hội thoại để bắt đầu chủ đề mới.
+- `/summary` (hoặc `@Bot tóm tắt`): Yêu cầu Bot tóm tắt cuộc thảo luận gần nhất trong nhóm, các quyết định và việc cần làm.
+- **Gửi ảnh kèm câu hỏi**: Gửi hình bài viết, hóa đơn, bảng báo giá để Bot đọc và phân tích chi tiết.
+
+---
+
+## 🤖 Hướng Tiếp Cận OpenClaw ("My ClawBot")
+
+Nếu bạn muốn xây dựng một **Trợ lý AI cá nhân hóa chuyên sâu** trực tiếp điều khiển các tác vụ trên máy tính cá nhân qua Zalo (thay vì bot dịch vụ doanh nghiệp):
+1. Tham khảo tài liệu [016-build-personal-assistant-with-open-claw.md](markdown/016-build-personal-assistant-with-open-claw.md).
+2. Chạy lệnh cài đặt plugin Zalo chính thức cho OpenClaw:
+   ```bash
+   npx -y @zalo-platforms/openclaw-zaloclawbot-cli install
+   ```
+3. Quét mã QR bằng ứng dụng Zalo trên điện thoại để liên kết trực tiếp tài khoản cá nhân với My ClawBot.

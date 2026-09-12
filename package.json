@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node src/local-polling.js",
     "dev": "node src/local-polling.js",
-    "test-connection": "node src/test-connection.js"
+    "test-connection": "node src/test-connection.js",
+    "test": "node scripts/verify-all.js"
   },
   "keywords": [
     "zalo",

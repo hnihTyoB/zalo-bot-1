@@ -133,6 +133,19 @@ async function getWebhookInfo() {
   return await callApi('getWebhookInfo', {});
 }
 
+/**
+ * Định dạng văn bản màu sắc theo chuẩn Zalo Markdown
+ */
+const formatStyles = {
+  green: (text) => `{green}${text}{/green}`,
+  red: (text) => `{red}${text}{/red}`,
+  orange: (text) => `{orange}${text}{/orange}`,
+  yellow: (text) => `{yellow}${text}{/yellow}`,
+  big: (text) => `{big}${text}{/big}`,
+  underline: (text) => `{underline}${text}{/underline}`,
+  bold: (text) => `**${text}**`
+};
+
 module.exports = {
   getMe,
   sendMessage,
@@ -140,5 +153,6 @@ module.exports = {
   getUpdates,
   setWebhook,
   deleteWebhook,
-  getWebhookInfo
+  getWebhookInfo,
+  formatStyles
 };

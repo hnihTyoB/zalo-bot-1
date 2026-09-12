@@ -20,7 +20,10 @@ const config = {
   geminiModel: process.env.GEMINI_MODEL || 'gemini-flash-latest',
   webhookSecretToken: process.env.WEBHOOK_SECRET_TOKEN || 'htd_secret_token_2026_secure',
   zaloApiBaseUrl: 'https://bot-api.zaloplatforms.com',
-  adminUserIds: adminIdsRaw.split(',').map(id => id.trim()).filter(Boolean)
+  adminUserIds: adminIdsRaw.split(',').map(id => id.trim()).filter(Boolean),
+  upstashRedisRestUrl: process.env.UPSTASH_REDIS_REST_URL || '',
+  upstashRedisRestToken: process.env.UPSTASH_REDIS_REST_TOKEN || '',
+  enableGoogleSearch: process.env.ENABLE_GOOGLE_SEARCH !== 'false'
 };
 
 if (!config.zaloBotToken) {
