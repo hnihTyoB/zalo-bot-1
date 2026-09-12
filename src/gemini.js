@@ -29,10 +29,11 @@ function clearHistory(chatId) {
 }
 
 /**
- * Gửi tin nhắn đến Gemini và nhận câu trả lời
+ * Gửi tin nhắn đến AI và nhận câu trả lời
+ * Tự động chuyển đổi giữa các model dự phòng nếu gặp lỗi 429 (hết quota) hoặc 503 (quá tải)
  * @param {string|number} chatId - ID cuộc trò chuyện
  * @param {string} userMessage - Nội dung tin nhắn người dùng
- * @returns {Promise<string>} - Nội dung phản hồi từ Gemini
+ * @returns {Promise<string>} - Nội dung phản hồi từ AI
  */
 async function askGemini(chatId, userMessage) {
   const idStr = String(chatId);
@@ -49,60 +50,99 @@ async function askGemini(chatId, userMessage) {
     parts: [{ text: userMessage }]
   });
 
-  // Giữ lại số lượng tin nhắn gần nhất để tránh tràn ngữ cảnh
+  // 1. Giữ lại số lượng tin nhắn gần nhất
   if (history.length > MAX_HISTORY_MESSAGES) {
     history.splice(0, history.length - MAX_HISTORY_MESSAGES);
+  }
+
+  // 2. Chuẩn hóa history: bắt buộc bắt đầu bằng 'user' và xen kẽ user/model
+  const cleanContents = [];
+  for (const item of history) {
+    if (cleanContents.length === 0) {
+      if (item.role === 'user') cleanContents.push(item);
+    } else {
+      const lastRole = cleanContents[cleanContents.length - 1].role;
+      if (item.role !== lastRole) {
+        cleanContents.push(item);
+      } else if (item.role === 'user') {
+        // Nếu có 2 lượt user liên tiếp, lấy tin nhắn mới nhất
+        cleanContents[cleanContents.length - 1] = item;
+      }
+    }
+  }
+
+  if (cleanContents.length === 0) {
+    cleanContents.push({
+      role: 'user',
+      parts: [{ text: userMessage }]
+    });
   }
 
   const payload = {
     systemInstruction: {
       parts: [{ text: SYSTEM_INSTRUCTION }]
     },
-    contents: history,
+    contents: cleanContents,
     generationConfig: {
       temperature: 0.7,
       maxOutputTokens: 1000
     }
   };
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${config.geminiModel}:generateContent?key=${config.geminiApiKey}`;
+  // Danh sách model ưu tiên theo thứ tự (Tự động fallback nếu 1 model hết quota/quá tải)
+  const candidateModels = [
+    ...new Set([
+      config.geminiModel,
+      'gemini-flash-latest',
+      'gemini-3.5-flash',
+      'gemini-flash-lite-latest',
+      'gemini-3.7-flash'
+    ].filter(Boolean))
+  ];
 
-  try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(payload)
-    });
+  for (const model of candidateModels) {
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${config.geminiApiKey}`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Gemini API Error (${response.status}):`, errorText);
-      throw new Error(`Gemini API returned status ${response.status}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.warn(`⚠️ Model [${model}] trả về mã ${response.status}: ${errorText.slice(0, 120)}`);
+        // Nếu lỗi (429 hết quota, 503 quá tải, 404 không tồn tại), tự động thử model tiếp theo
+        continue;
+      }
+
+      const data = await response.json();
+      const candidate = data.candidates?.[0];
+      const replyText = candidate?.content?.parts?.[0]?.text;
+
+      if (!replyText) {
+        continue;
+      }
+
+      // Lưu phản hồi thành công vào lịch sử
+      history.push({
+        role: 'model',
+        parts: [{ text: replyText }]
+      });
+
+      console.log(`✅ Phản hồi AI thành công qua model: ${model}`);
+      return replyText;
+    } catch (err) {
+      console.warn(`⚠️ Lỗi kết nối tới model [${model}]:`, err.message);
     }
-
-    const data = await response.json();
-    const candidate = data.candidates?.[0];
-    const replyText = candidate?.content?.parts?.[0]?.text;
-
-    if (!replyText) {
-      return 'Xin lỗi, tôi chưa thể trả lời câu hỏi này lúc này. Bạn vui lòng thử lại nhé!';
-    }
-
-    // Lưu phản hồi của bot vào lịch sử
-    history.push({
-      role: 'model',
-      parts: [{ text: replyText }]
-    });
-
-    return replyText;
-  } catch (error) {
-    console.error('Lỗi khi gọi Gemini:', error.message);
-    // Xóa tin nhắn người dùng vừa thêm nếu request thất bại để tránh lệch lượt hỏi-đáp
-    history.pop();
-    return '⚠️ Đã xảy ra lỗi khi kết nối với trí tuệ nhân tạo. Vui lòng thử lại sau ít giây!';
   }
+
+  // Nếu tất cả các model đều thất bại:
+  history.pop();
+  console.error('❌ Tất cả các model AI đều không phản hồi!');
+  return '⚠️ Đã xảy ra lỗi khi kết nối với trí tuệ nhân tạo. Vui lòng thử lại sau ít giây!';
 }
 
 module.exports = {

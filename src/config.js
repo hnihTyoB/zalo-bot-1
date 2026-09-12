@@ -5,7 +5,7 @@ const adminIdsRaw = process.env.ADMIN_USER_IDS || process.env.ADMIN_USER_ID || '
 const config = {
   zaloBotToken: process.env.ZALO_BOT_TOKEN,
   geminiApiKey: process.env.GEMINI_API_KEY,
-  geminiModel: process.env.GEMINI_MODEL || 'gemini-3.6-flash',
+  geminiModel: process.env.GEMINI_MODEL || 'gemini-flash-latest',
   webhookSecretToken: process.env.WEBHOOK_SECRET_TOKEN || 'htd_secret_token_2026_secure',
   zaloApiBaseUrl: 'https://bot-api.zaloplatforms.com',
   adminUserIds: adminIdsRaw.split(',').map(id => id.trim()).filter(Boolean)
