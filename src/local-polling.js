@@ -33,6 +33,7 @@ Tôi là trợ lý AI thông minh của HTD Media, luôn sẵn sàng hỗ trợ 
 - \`/summary\` : (Dành cho Nhóm) Tóm tắt các nội dung thảo luận gần nhất, các quyết định và việc cần làm.
 - \`/reminders\` : Xem danh sách các lịch nhắc hẹn đang chờ.
 - \`/xoanhac <STT>\` : (Quản trị viên) Hủy lịch nhắc hẹn theo số thứ tự (ví dụ: \`/xoanhac 1\` hoặc \`/xoanhac all\`).
+- \`/id\` : Xem Zalo ID của bạn (hoặc reply tin nhắn của người khác kèm \`/id\` để xem ID của họ).
 
 ⏰ **Tạo Nhắc Hẹn Tự Động (Dành riêng cho Quản trị viên):**
 - Quản trị viên chỉ cần nói câu bình thường:
@@ -68,6 +69,13 @@ async function handleMessage(eventData) {
   const senderName = msg.from?.display_name || "Bạn";
   const chatType = msg.chat?.chat_type || "PRIVATE";
   const isAdmin = config.adminUserIds.includes(senderId);
+  const isBlocked = config.blockedUserIds.includes(senderId);
+
+  // KIỂM TRA BLACKLIST (DANH SÁCH BỊ CHẶN):
+  if (isBlocked) {
+    console.log(`🚫 [BLACKLIST] Bỏ qua tin nhắn từ người dùng bị chặn: "${senderName}" (${senderId})`);
+    return;
+  }
 
   // KIỂM TRA QUYỀN TRUY CẬP:
   // Nếu là chat riêng 1-1 và không phải Admin -> Chặn không phản hồi tự do
@@ -356,6 +364,42 @@ async function handleMessage(eventData) {
       chatId,
       "🧹 Đã xóa lịch sử trò chuyện thành công! Giờ bạn có thể bắt đầu một chủ đề hoàn toàn mới.",
     );
+    return;
+  }
+
+  if (rawText === "/id" || rawText === "/myid" || rawText === "/whois") {
+    const quoted = msg.quote || msg.reply_to || msg.quoted_message;
+    if (quoted && quoted.from?.id) {
+      const targetName = quoted.from.display_name || "Người dùng";
+      const targetId = String(quoted.from.id);
+      const isTargetAdmin = config.adminUserIds.includes(targetId);
+      const isTargetBlocked = config.blockedUserIds.includes(targetId);
+      const statusStr = isTargetBlocked ? "🚫 Đang bị chặn" : (isTargetAdmin ? "⭐ Quản trị viên (Admin)" : "👥 Thành viên");
+
+      const reply = [
+        "{big}{green}🆔 THÔNG TIN NGƯỜI DÙNG ĐƯỢC TRẢ LỜI{/green}{/big}",
+        "",
+        `👤 **Họ tên:** ${targetName}`,
+        `🔑 **Zalo User ID:** \`${targetId}\``,
+        `🔰 **Trạng thái:** ${statusStr}`,
+        "",
+        "_💡 Bạn có thể copy ID này để cấu hình Quản trị viên (ADMIN_USER_IDS) hoặc chặn (BLOCKED_USER_IDS) trong file .env._"
+      ].join("\n");
+      await sendMessage(chatId, reply, "markdown");
+      return;
+    }
+
+    const reply = [
+      "{big}{green}🆔 THÔNG TIN TÀI KHOẢN CỦA BẠN{/green}{/big}",
+      "",
+      `👤 **Họ tên:** ${senderName}`,
+      `🔑 **Zalo User ID:** \`${senderId}\``,
+      `💬 **Chat ID:** \`${chatId}\` (${chatType})`,
+      isAdmin ? "⭐ **Quyền hạn:** Quản trị viên (Admin)" : "👥 **Quyền hạn:** Thành viên",
+      "",
+      "_💡 Dùng ID này để cấu hình quyền Admin hoặc phân quyền trong file .env._"
+    ].join("\n");
+    await sendMessage(chatId, reply, "markdown");
     return;
   }
 
