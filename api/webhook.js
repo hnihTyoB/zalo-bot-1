@@ -1,6 +1,13 @@
 const { sendMessage, sendChatAction } = require('../src/zalo');
-const { askGemini, askGeminiVision, summarizeGroupChat, clearHistory } = require('../src/gemini');
+const {
+  askGemini,
+  askGeminiVision,
+  summarizeGroupChat,
+  parseReminderIntent,
+  clearHistory,
+} = require('../src/gemini');
 const storage = require('../src/storage');
+const { checkAndSendDueReminders } = require('../src/reminder-worker');
 const config = require('../src/config');
 
 const HELP_TEXT = `🤖 **HƯỚNG DẪN SỬ DỤNG BOT HTD MEDIA (AI ĐA NĂNG)**
@@ -12,10 +19,17 @@ Tôi là trợ lý AI thông minh của HTD Media, luôn sẵn sàng hỗ trợ 
 - \`/help\` : Xem hướng dẫn sử dụng này.
 - \`/reset\` : Xóa ngữ cảnh của cuộc trò chuyện hiện tại để bắt đầu chủ đề mới.
 - \`/summary\` : (Dành cho Nhóm) Tóm tắt các nội dung thảo luận gần nhất, các quyết định và việc cần làm.
+- \`/reminders\` : Xem danh sách các lịch nhắc hẹn đang chờ.
 
-💬 **Khả năng nổi bật:**
-- **Đọc & Phân tích hình ảnh:** Bạn chỉ cần gửi ảnh (hóa đơn, bài tập, sơ đồ, tài liệu) kèm câu hỏi, tôi sẽ phân tích và giải đáp ngay.
-- **Trong Chat 1-1:** Trao đổi trực tiếp mọi chủ đề (dành cho Quản trị viên).
+⏰ **Tạo Nhắc Hẹn Tự Động:**
+- Bạn chỉ cần nói câu bình thường:
+  + *"nhắc tôi 15 phút nữa gọi cho đối tác"*
+  + *"nhắc nhóm 16h30 chiều nay nộp báo cáo"*
+  + *"nhắc tôi 8h sáng mai kiểm tra server"*
+- Đến đúng giờ, tôi sẽ chủ động nhắn tin Zalo cho bạn hoặc nhóm!
+
+💬 **Khả năng khác:**
+- **Đọc & Phân tích hình ảnh:** Bạn gửi ảnh (hóa đơn, bài tập, sơ đồ, tài liệu) kèm câu hỏi, tôi sẽ phân tích và giải đáp ngay.
 - **Trong Nhóm Chat:** Hãy gõ \`@Bot HTD Media\` hoặc **Trả lời** tin nhắn của Bot để tôi hỗ trợ nhé!`;
 
 module.exports = async (req, res) => {
@@ -46,6 +60,9 @@ module.exports = async (req, res) => {
     console.warn('⚠️ Webhook bị từ chối do Secret Token không khớp');
     return res.status(403).json({ message: 'Unauthorized' });
   }
+
+  // Quét và kích hoạt các nhắc hẹn đến giờ trong nền
+  checkAndSendDueReminders().catch(() => {});
 
   // 3. Parse body an toàn
   let data = req.body;
@@ -180,11 +197,60 @@ module.exports = async (req, res) => {
     }
   }
 
-  // 5. Xử lý các lệnh cơ bản
+  // 5. Lệnh xem danh sách nhắc hẹn (/reminders)
+  if (rawText === '/reminders' || rawText.toLowerCase() === 'lịch hẹn' || rawText.toLowerCase().includes('danh sách nhắc')) {
+    const activeList = await storage.getChatReminders(chatId);
+    if (activeList.length === 0) {
+      const zaloRes = await sendMessage(chatId, '📅 Hiện tại bạn không có lịch nhắc hẹn nào đang chờ.');
+      return res.status(200).json({ ok: true, zalo: zaloRes });
+    }
+
+    const lines = activeList.map((r, idx) => {
+      const timeStr = new Date(r.remindAt).toLocaleString('vi-VN', {
+        timeZone: 'Asia/Ho_Chi_Minh',
+        hour: '2-digit',
+        minute: '2-digit',
+        day: '2-digit',
+        month: '2-digit'
+      });
+      return `${idx + 1}. ⏰ **${timeStr}**: ${r.content} _(Bởi: ${r.senderName})_`;
+    });
+
+    const msgReply = [
+      '{big}{green}📅 DANH SÁCH LỊCH NHẮC HẸN ĐANG CHỜ{/green}{/big}',
+      '',
+      ...lines,
+      '',
+      '_Bot sẽ tự động gửi tin nhắn thông báo khi đến giờ hẹn nhé!_'
+    ].join('\n');
+
+    const zaloRes = await sendMessage(chatId, msgReply, 'markdown');
+    return res.status(200).json({ ok: true, zalo: zaloRes });
+  }
+
+  // 6. Phân tích yêu cầu tạo nhắc hẹn tự động (Ví dụ: "nhắc tôi 15 phút nữa...")
+  const reminderCheck = await parseReminderIntent(rawText);
+  if (reminderCheck && reminderCheck.isReminder) {
+    const saved = await storage.addReminder({
+      chatId,
+      senderId,
+      senderName,
+      chatType,
+      content: reminderCheck.content,
+      remindAt: reminderCheck.remindAt
+    });
+
+    const timeVN = new Date(saved.remindAt).toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
+    console.log(`⏰ [Reminder] Đã lưu lịch nhắc: "${saved.content}" lúc ${timeVN} cho ${senderName}`);
+    const zaloRes = await sendMessage(chatId, reminderCheck.confirmationMessage, 'markdown');
+    return res.status(200).json({ ok: true, zalo: zaloRes, reminder: saved });
+  }
+
+  // 7. Xử lý các lệnh cơ bản
   if (rawText === '/start') {
     const zaloRes = await sendMessage(
       chatId,
-      `Xin chào **${senderName}**! 👋\n\nTôi là **Bot HTD Media**, trợ lý AI thông minh trên nền tảng Zalo.\n\nHãy hỏi tôi bất kỳ điều gì, gửi hình ảnh để phân tích, hoặc gõ \`/help\` để xem trợ giúp!`
+      `Xin chào **${senderName}**! 👋\n\nTôi là **Bot HTD Media**, trợ lý AI thông minh trên nền tảng Zalo.\n\nHãy hỏi tôi bất kỳ điều gì, gửi hình ảnh để phân tích, hoặc đặt lịch nhắc hẹn (ví dụ: *"nhắc tôi 15 phút nữa nộp bài"*). Gõ \`/help\` để xem trợ giúp!`
     );
     return res.status(200).json({ ok: true, zalo: zaloRes });
   }
@@ -200,7 +266,7 @@ module.exports = async (req, res) => {
     return res.status(200).json({ ok: true, zalo: zaloRes });
   }
 
-  // 6. Gửi sang Gemini AI & phản hồi lại
+  // 8. Gửi sang Gemini AI & phản hồi lại
   await sendChatAction(chatId, 'typing');
   const typingTimer = setInterval(() => {
     sendChatAction(chatId, 'typing').catch(() => {});

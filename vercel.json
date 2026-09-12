@@ -1,9 +1,19 @@
 {
   "version": 2,
+  "crons": [
+    {
+      "path": "/api/cron-reminders",
+      "schedule": "* * * * *"
+    }
+  ],
   "rewrites": [
     {
       "source": "/api/webhook",
       "destination": "/api/webhook.js"
+    },
+    {
+      "source": "/api/cron-reminders",
+      "destination": "/api/cron-reminders.js"
     }
   ]
 }

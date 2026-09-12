@@ -1,6 +1,13 @@
 const storage = require('../src/storage');
-const { askGemini, askGeminiVision, summarizeGroupChat, clearHistory } = require('../src/gemini');
+const {
+  askGemini,
+  askGeminiVision,
+  summarizeGroupChat,
+  parseReminderIntent,
+  clearHistory
+} = require('../src/gemini');
 const { formatStyles } = require('../src/zalo');
+const { checkAndSendDueReminders } = require('../src/reminder-worker');
 
 async function verifyAll() {
   console.log('==================================================');
@@ -66,8 +73,7 @@ async function verifyAll() {
 
   // Test 4: Gemini Multimodal Vision
   console.log('\n▶️ [Test 4] Kiểm tra Multimodal Vision (Phân tích ảnh mẫu)...');
-  // Ảnh mẫu SVG/PNG trực tuyến hoặc ảnh placeholder
-  const sampleImageUrl = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png'; // Ảnh Pikachu nhỏ nhẹ
+  const sampleImageUrl = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png';
   console.log(`  Đang gửi ảnh kiểm tra từ: ${sampleImageUrl}`);
   const visionReply = await askGeminiVision(testChatId, 'Bức ảnh này là con gì và có màu sắc đặc trưng như thế nào?', sampleImageUrl);
   console.log('--- KẾT QUẢ PHÂN TÍCH ẢNH: ---');
@@ -86,6 +92,46 @@ async function verifyAll() {
   if (formatted.includes('{green}') && formatted.includes('{big}')) {
     console.log('  ✅ Định dạng Rich Text hợp lệ!');
   }
+
+  // Test 6: Reminder System (Nhắc Hẹn Tự Động)
+  console.log('\n▶️ [Test 6] Kiểm tra Hệ Thống Nhắc Hẹn Tự Động (Reminder System)...');
+  const testReminderText = 'nhắc tôi sau 10 phút nữa nộp bài kiểm tra nhé';
+  const reminderParsed = await parseReminderIntent(testReminderText);
+  console.log('  Kết quả phân tích nhắc hẹn:', reminderParsed);
+
+  if (reminderParsed.isReminder && reminderParsed.remindAt > Date.now()) {
+    console.log('  ✅ Phân tích câu nói nhắc hẹn thành công!');
+  } else {
+    throw new Error('❌ Phân tích nhắc hẹn thất bại!');
+  }
+
+  // Lưu thử vào Redis
+  const savedRem = await storage.addReminder({
+    chatId: testChatId,
+    senderId: 'user_test',
+    senderName: 'Admin Thịnh',
+    chatType: 'PRIVATE',
+    content: reminderParsed.content,
+    remindAt: reminderParsed.remindAt
+  });
+  console.log(`  ✅ Đã lưu nhắc hẹn ID: ${savedRem.id} lên Upstash Redis!`);
+
+  // Lấy danh sách nhắc hẹn của chat
+  const chatReminders = await storage.getChatReminders(testChatId);
+  if (chatReminders.length > 0 && chatReminders[0].id === savedRem.id) {
+    console.log(`  ✅ Đọc danh sách nhắc hẹn từ Redis thành công (${chatReminders.length} lịch hẹn)!`);
+  } else {
+    throw new Error('❌ Đọc danh sách nhắc hẹn từ Redis thất bại!');
+  }
+
+  // Kiểm tra worker chạy an toàn
+  const workerResult = await checkAndSendDueReminders();
+  console.log('  Kết quả chạy Worker kiểm tra lịch hẹn đến hạn:', workerResult);
+  console.log('  ✅ Worker chạy trơn tru, sẵn sàng phục vụ!');
+
+  // Dọn dẹp reminder test
+  await storage.deleteReminder(savedRem.id, testChatId);
+  console.log('  ✅ Đã dọn dẹp lịch hẹn thử nghiệm thành công.');
 
   // Clean up
   await clearHistory(testChatId);

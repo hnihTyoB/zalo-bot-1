@@ -6,8 +6,15 @@ const {
   sendMessage,
   sendChatAction,
 } = require("./zalo");
-const { askGemini, askGeminiVision, summarizeGroupChat, clearHistory } = require("./gemini");
+const {
+  askGemini,
+  askGeminiVision,
+  summarizeGroupChat,
+  parseReminderIntent,
+  clearHistory,
+} = require("./gemini");
 const storage = require("./storage");
+const { checkAndSendDueReminders } = require("./reminder-worker");
 const config = require("./config");
 
 let isRunning = true;
@@ -23,10 +30,17 @@ Tôi là trợ lý AI thông minh của HTD Media, luôn sẵn sàng hỗ trợ 
 - \`/help\` : Xem hướng dẫn sử dụng này.
 - \`/reset\` : Xóa ngữ cảnh của cuộc trò chuyện hiện tại để bắt đầu chủ đề mới.
 - \`/summary\` : (Dành cho Nhóm) Tóm tắt các nội dung thảo luận gần nhất, các quyết định và việc cần làm.
+- \`/reminders\` : Xem danh sách các lịch nhắc hẹn đang chờ.
 
-💬 **Khả năng nổi bật:**
-- **Đọc & Phân tích hình ảnh:** Bạn chỉ cần gửi ảnh (hóa đơn, bài tập, sơ đồ, tài liệu) kèm câu hỏi, tôi sẽ phân tích và giải đáp ngay.
-- **Trong Chat 1-1:** Trao đổi trực tiếp mọi chủ đề (dành cho Quản trị viên).
+⏰ **Tạo Nhắc Hẹn Tự Động:**
+- Bạn chỉ cần nói câu bình thường:
+  + *"nhắc tôi 15 phút nữa gọi cho đối tác"*
+  + *"nhắc nhóm 16h30 chiều nay nộp báo cáo"*
+  + *"nhắc tôi 8h sáng mai kiểm tra server"*
+- Đến đúng giờ, tôi sẽ chủ động nhắn tin Zalo cho bạn hoặc nhóm!
+
+💬 **Khả năng khác:**
+- **Đọc & Phân tích hình ảnh:** Bạn gửi ảnh (hóa đơn, bài tập, sơ đồ, tài liệu) kèm câu hỏi, tôi sẽ phân tích và giải đáp ngay.
 - **Trong Nhóm Chat:** Hãy gõ \`@Bot HTD Media\` hoặc **Trả lời** tin nhắn của Bot để tôi hỗ trợ nhé!`;
 
 /**
@@ -162,9 +176,58 @@ async function handleMessage(eventData) {
     }
   }
 
-  // 2. Các lệnh hệ thống khác
+  // 2. Lệnh xem danh sách nhắc hẹn (/reminders)
+  if (rawText === "/reminders" || rawText.toLowerCase() === "lịch hẹn" || rawText.toLowerCase().includes("danh sách nhắc")) {
+    const activeList = await storage.getChatReminders(chatId);
+    if (activeList.length === 0) {
+      await sendMessage(chatId, "📅 Hiện tại không có lịch nhắc hẹn nào đang chờ.");
+      return;
+    }
+
+    const lines = activeList.map((r, idx) => {
+      const timeStr = new Date(r.remindAt).toLocaleString("vi-VN", {
+        timeZone: "Asia/Ho_Chi_Minh",
+        hour: "2-digit",
+        minute: "2-digit",
+        day: "2-digit",
+        month: "2-digit"
+      });
+      return `${idx + 1}. ⏰ **${timeStr}**: ${r.content} _(Bởi: ${r.senderName})_`;
+    });
+
+    const msgReply = [
+      "{big}{green}📅 DANH SÁCH LỊCH NHẮC HẸN ĐANG CHỜ{/green}{/big}",
+      "",
+      ...lines,
+      "",
+      "_Bot sẽ tự động gửi tin nhắn thông báo khi đến giờ hẹn nhé!_"
+    ].join("\n");
+
+    await sendMessage(chatId, msgReply, "markdown");
+    return;
+  }
+
+  // 3. Phân tích yêu cầu tạo nhắc hẹn tự động (Ví dụ: "nhắc tôi 15 phút nữa...")
+  const reminderCheck = await parseReminderIntent(rawText);
+  if (reminderCheck && reminderCheck.isReminder) {
+    const saved = await storage.addReminder({
+      chatId,
+      senderId,
+      senderName,
+      chatType,
+      content: reminderCheck.content,
+      remindAt: reminderCheck.remindAt
+    });
+
+    const timeVN = new Date(saved.remindAt).toLocaleTimeString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" });
+    console.log(`⏰ [Reminder] Đã lưu lịch nhắc: "${saved.content}" lúc ${timeVN} cho ${senderName}`);
+    await sendMessage(chatId, reminderCheck.confirmationMessage, "markdown");
+    return;
+  }
+
+  // 4. Các lệnh hệ thống khác
   if (rawText === "/start") {
-    const welcome = `Xin chào **${senderName}**! 👋\n\nTôi là **${botInfo?.display_name || "Bot HTD Media"}**, trợ lý AI thông minh chạy trên nền tảng Zalo.\n\nBạn có thể hỏi tôi bất kỳ điều gì, gửi ảnh để tôi phân tích, hoặc gõ \`/help\` để xem các lệnh hướng dẫn!`;
+    const welcome = `Xin chào **${senderName}**! 👋\n\nTôi là **${botInfo?.display_name || "Bot HTD Media"}**, trợ lý AI thông minh chạy trên nền tảng Zalo.\n\nBạn có thể hỏi tôi bất kỳ điều gì, gửi ảnh để phân tích, hoặc đặt lịch nhắc hẹn (ví dụ: *"nhắc tôi 15 phút nữa nộp bài"*). Gõ \`/help\` để xem chi tiết!`;
     await sendMessage(chatId, welcome);
     return;
   }
@@ -188,7 +251,7 @@ async function handleMessage(eventData) {
     return;
   }
 
-  // 3. Xử lý bằng Gemini AI
+  // 5. Xử lý hội thoại AI bình thường
   await sendChatAction(chatId, "typing");
   const typingTimer = setInterval(() => {
     sendChatAction(chatId, "typing").catch(() => {});
@@ -217,7 +280,7 @@ async function handleMessage(eventData) {
  */
 async function startPolling() {
   console.log("\n======================================================");
-  console.log("🚀 KHỞI ĐỘNG ZALO BOT AI TRÊN CHẾ ĐỘ LONG POLLING (NÂNG CẤO)");
+  console.log("🚀 KHỞI ĐỘNG ZALO BOT AI TRÊN CHẾ ĐỘ LONG POLLING");
   console.log("======================================================");
 
   try {
@@ -244,12 +307,18 @@ async function startPolling() {
       console.log(`✅ Đã giải phóng Webhook thành công!`);
     }
 
+    // 3. Khởi động tiến trình ngầm quét và gửi nhắc hẹn mỗi 15 giây
+    console.log("⏰ Đã kích hoạt tiến trình kiểm tra nhắc hẹn tự động (mỗi 15 giây)...");
+    setInterval(() => {
+      checkAndSendDueReminders().catch(() => {});
+    }, 15000);
+
     console.log(
-      "🟢 Bot đã sẵn sàng nhận tin nhắn & hình ảnh! Hãy nhắn tin cho bot trên Zalo để thử nghiệm.",
+      "🟢 Bot đã sẵn sàng nhận tin nhắn, hình ảnh & nhắc hẹn! Hãy nhắn tin cho bot trên Zalo.",
     );
     console.log("(Nhấn Ctrl + C để dừng bot bất cứ lúc nào)\n");
 
-    // 3. Vòng lặp Polling
+    // 4. Vòng lặp Polling
     while (isRunning) {
       try {
         const updateRes = await getUpdates(30);

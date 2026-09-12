@@ -380,9 +380,130 @@ Hãy đóng vai trò Thư ký AI chuyên nghiệp của HTD Media và lập mộ
   }
 }
 
+/**
+ * Kiểm tra xem tin nhắn có mang ý định đặt nhắc hẹn không
+ */
+function looksLikeReminder(text) {
+  const t = text.toLowerCase();
+  return (
+    t.includes('nhắc tôi') ||
+    t.includes('nhắc em') ||
+    t.includes('nhắc mình') ||
+    t.includes('nhắc bạn') ||
+    t.includes('nhắc nhóm') ||
+    t.includes('nhắc hẹn') ||
+    t.includes('hẹn giờ') ||
+    t.includes('đặt lịch nhắc') ||
+    t.includes('đặt nhắc hẹn') ||
+    t.startsWith('/remind') ||
+    t.startsWith('/nhac')
+  );
+}
+
+/**
+ * Trích xuất nhắc hẹn nhanh qua Regex (0ms latency cho các câu phổ biến: sau X phút/giờ)
+ */
+function tryQuickRegexReminder(text) {
+  const t = text.trim();
+  const relMatch = t.match(/nhắc\s+(?:tôi|em|mình|nhóm|bạn)?\s*(?:sau)?\s*(\d+)\s*(phút|giờ|tiếng|giây)\s*(?:nữa)?(?:\s+là|\s*:|\s+về|\s+để)?\s*(.*)/i);
+  if (relMatch) {
+    const num = parseInt(relMatch[1], 10);
+    const unit = relMatch[2].toLowerCase();
+    let content = relMatch[3].trim();
+    if (!content) content = 'Công việc đã lên lịch';
+    content = content.replace(/^(nhé|nha|ạ|đi|giùm|hộ)\s*/i, '').trim();
+
+    let ms = 0;
+    if (unit === 'phút') ms = num * 60 * 1000;
+    else if (unit === 'giờ' || unit === 'tiếng') ms = num * 3600 * 1000;
+    else if (unit === 'giây') ms = num * 1000;
+
+    if (ms > 0) {
+      const remindAt = Date.now() + ms;
+      const timeStr = new Date(remindAt).toLocaleTimeString('vi-VN', {
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZone: 'Asia/Ho_Chi_Minh'
+      });
+      return {
+        isReminder: true,
+        content,
+        remindAt,
+        timeFormatted: `${timeStr} (sau ${num} ${unit})`,
+        confirmationMessage: `⏰ **Đã ghi nhận nhắc hẹn thành công!**\n\n📌 **Nội dung:** ${content}\n🕒 **Thời gian nhắc:** ${timeStr} (sau ${num} ${unit})\n\n_Bot HTD Media sẽ chủ động nhắn tin Zalo cho bạn khi đến giờ!_`
+      };
+    }
+  }
+  return null;
+}
+
+/**
+ * Phân tích yêu cầu nhắc hẹn bằng Gemini AI (kết hợp Regex siêu tốc)
+ * @param {string} userMessage
+ * @returns {Promise<{ isReminder: boolean, content?: string, remindAt?: number, timeFormatted?: string, confirmationMessage?: string }>}
+ */
+async function parseReminderIntent(userMessage) {
+  if (!looksLikeReminder(userMessage)) {
+    return { isReminder: false };
+  }
+
+  // 1. Thử parse bằng Regex siêu tốc trước (0ms latency)
+  const quick = tryQuickRegexReminder(userMessage);
+  if (quick) {
+    return quick;
+  }
+
+  // 2. Dùng Gemini AI phân tích câu nói tự nhiên phức tạp
+  const now = new Date();
+  const nowStr = now.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
+  const prompt = `Thời điểm hiện tại tại Việt Nam (GMT+7) là: ${nowStr} (Timestamp ms: ${now.getTime()}).
+Người dùng gửi tin nhắn: "${userMessage}"
+
+Hãy xác định xem người dùng có đang yêu cầu đặt lịch hẹn/nhắc nhở (reminder) không.
+Nếu CÓ, hãy tính toán chính xác timestamp (mili-giây tính từ Unix epoch) đến thời điểm cần nhắc, nội dung cần nhắc và lời xác nhận thân thiện.
+Lưu ý: Thời điểm cần nhắc phải ở tương lai so với thời điểm hiện tại.
+Nếu KHÔNG hoặc câu nói mơ hồ không xác định được thời điểm, trả về isReminder: false.
+
+CHỈ trả về một JSON object duy nhất:
+{
+  "isReminder": true,
+  "content": "nội dung công việc cần nhắc ngắn gọn",
+  "targetTimestamp": 1789195000000,
+  "formattedTime": "HH:mm ngày DD/MM/YYYY",
+  "confirmationMessage": "Dạ, tôi đã lên lịch nhắc bạn '...' vào lúc HH:mm ngày DD/MM/YYYY rồi nhé."
+}`;
+
+  const payload = {
+    contents: [{ role: 'user', parts: [{ text: prompt }] }],
+    generationConfig: {
+      temperature: 0.1,
+      responseMimeType: 'application/json'
+    }
+  };
+
+  try {
+    const rawJson = await executeGeminiRequest(() => payload);
+    const parsed = JSON.parse(rawJson);
+    if (parsed && parsed.isReminder && parsed.targetTimestamp && Number(parsed.targetTimestamp) > Date.now()) {
+      return {
+        isReminder: true,
+        content: parsed.content || 'Công việc đã lên lịch',
+        remindAt: Number(parsed.targetTimestamp),
+        timeFormatted: parsed.formattedTime || 'Thời gian đã hẹn',
+        confirmationMessage: parsed.confirmationMessage || `⏰ **Đã đặt nhắc hẹn:** "${parsed.content}" lúc ${parsed.formattedTime}!`
+      };
+    }
+  } catch (err) {
+    console.warn('⚠️ Gemini parse reminder intent failed:', err.message);
+  }
+
+  return { isReminder: false };
+}
+
 module.exports = {
   askGemini,
   askGeminiVision,
   summarizeGroupChat,
+  parseReminderIntent,
   clearHistory
 };

@@ -3,11 +3,13 @@ const config = require('./config');
 // Bộ nhớ RAM dự phòng khi không cấu hình Redis hoặc chạy local
 const memoryConversations = new Map();
 const memoryGroupBuffers = new Map();
+let memoryReminders = [];
 
 const MAX_HISTORY_MESSAGES = 10;
 const MAX_GROUP_BUFFER = 50;
 const CONVERSATION_TTL_SECONDS = 86400; // 24 giờ
 const GROUP_BUFFER_TTL_SECONDS = 43200; // 12 giờ
+const REDIS_REMINDERS_KEY = 'zalo:reminders:list';
 
 /**
  * Thực thi lệnh Upstash Redis qua REST API (Chuẩn Serverless không cần dependency)
@@ -172,11 +174,123 @@ async function clearGroupMessages(chatId) {
   }
 }
 
+// ==========================================
+// QUẢN LÝ NHẮC HẸN (REMINDERS)
+// ==========================================
+
+/**
+ * Lấy danh sách toàn bộ nhắc hẹn đang chờ
+ * @returns {Promise<Array>}
+ */
+async function getAllReminders() {
+  if (config.upstashRedisRestUrl && config.upstashRedisRestToken) {
+    const raw = await callRedisCommand('GET', REDIS_REMINDERS_KEY);
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return parsed;
+      } catch (e) {}
+    }
+  }
+  return memoryReminders;
+}
+
+/**
+ * Lưu danh sách nhắc hẹn
+ * @param {Array} reminders
+ */
+async function saveAllReminders(reminders) {
+  memoryReminders = reminders;
+  if (config.upstashRedisRestUrl && config.upstashRedisRestToken) {
+    await callRedisCommand('SET', REDIS_REMINDERS_KEY, JSON.stringify(reminders));
+  }
+}
+
+/**
+ * Thêm một nhắc hẹn mới
+ * @param {{ chatId: string, senderId: string, senderName: string, chatType: string, content: string, remindAt: number }} reminderData
+ * @returns {Promise<object>}
+ */
+async function addReminder(reminderData) {
+  const reminders = await getAllReminders();
+  const newReminder = {
+    id: `rem_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+    chatId: String(reminderData.chatId),
+    senderId: String(reminderData.senderId || ''),
+    senderName: reminderData.senderName || 'Bạn',
+    chatType: reminderData.chatType || 'PRIVATE',
+    content: reminderData.content,
+    remindAt: Number(reminderData.remindAt),
+    createdAt: Date.now()
+  };
+
+  reminders.push(newReminder);
+  await saveAllReminders(reminders);
+  return newReminder;
+}
+
+/**
+ * Lấy các nhắc hẹn đã đến giờ gửi (remindAt <= Date.now())
+ * @returns {Promise<Array>}
+ */
+async function getDueReminders() {
+  const now = Date.now();
+  const reminders = await getAllReminders();
+  return reminders.filter(r => Number(r.remindAt) <= now);
+}
+
+/**
+ * Đánh dấu nhắc hẹn đã gửi xong (xóa khỏi danh sách chờ)
+ * @param {string} reminderId
+ */
+async function markReminderSent(reminderId) {
+  const reminders = await getAllReminders();
+  const remaining = reminders.filter(r => r.id !== reminderId);
+  await saveAllReminders(remaining);
+}
+
+/**
+ * Lấy danh sách nhắc hẹn đang chờ của một cuộc trò chuyện
+ * @param {string|number} chatId
+ * @returns {Promise<Array>}
+ */
+async function getChatReminders(chatId) {
+  const idStr = String(chatId);
+  const now = Date.now();
+  const reminders = await getAllReminders();
+  return reminders
+    .filter(r => String(r.chatId) === idStr && Number(r.remindAt) > now)
+    .sort((a, b) => a.remindAt - b.remindAt);
+}
+
+/**
+ * Xóa/Hủy một nhắc hẹn cụ thể
+ * @param {string} reminderId
+ * @param {string|number} chatId
+ * @returns {Promise<boolean>}
+ */
+async function deleteReminder(reminderId, chatId) {
+  const idStr = String(chatId);
+  const reminders = await getAllReminders();
+  const initialLength = reminders.length;
+  const filtered = reminders.filter(r => !(r.id === reminderId && String(r.chatId) === idStr));
+  if (filtered.length !== initialLength) {
+    await saveAllReminders(filtered);
+    return true;
+  }
+  return false;
+}
+
 module.exports = {
   getConversationHistory,
   saveConversationHistory,
   clearConversationHistory,
   pushGroupMessage,
   getGroupMessages,
-  clearGroupMessages
+  clearGroupMessages,
+  addReminder,
+  getDueReminders,
+  markReminderSent,
+  getChatReminders,
+  deleteReminder
 };
