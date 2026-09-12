@@ -129,9 +129,49 @@ async function verifyAll() {
   console.log('  Kết quả chạy Worker kiểm tra lịch hẹn đến hạn:', workerResult);
   console.log('  ✅ Worker chạy trơn tru, sẵn sàng phục vụ!');
 
-  // Dọn dẹp reminder test
+  // Test 7: Kiểm tra Hủy Lịch Nhắc Hẹn (Cancel & Clear Reminders)
+  console.log('\n▶️ [Test 7] Kiểm tra Tính năng Hủy / Xóa Lịch Nhắc Hẹn...');
+  const rem1 = await storage.addReminder({
+    chatId: testChatId,
+    senderId: 'user_test',
+    senderName: 'Admin Thịnh',
+    chatType: 'PRIVATE',
+    content: 'Lịch nhắc kiểm thử 1',
+    remindAt: Date.now() + 600000
+  });
+  const rem2 = await storage.addReminder({
+    chatId: testChatId,
+    senderId: 'user_test',
+    senderName: 'Admin Thịnh',
+    chatType: 'PRIVATE',
+    content: 'Lịch nhắc kiểm thử 2',
+    remindAt: Date.now() + 1200000
+  });
+
+  let listBefore = await storage.getChatReminders(testChatId);
+  console.log(`  Danh sách trước khi hủy: ${listBefore.length} lịch hẹn`);
+
+  // Xóa lịch thứ 1 (STT 1)
+  const deletedOne = await storage.deleteReminder(listBefore[0].id, testChatId);
+  if (deletedOne) {
+    console.log('  ✅ Xóa lịch hẹn theo STT thành công!');
+  } else {
+    throw new Error('❌ Xóa lịch hẹn thất bại!');
+  }
+
+  // Hủy toàn bộ còn lại
+  const clearedCount = await storage.clearChatReminders(testChatId);
+  console.log(`  Đã hủy toàn bộ: ${clearedCount} lịch hẹn`);
+  const listAfter = await storage.getChatReminders(testChatId);
+  if (listAfter.length === 0) {
+    console.log('  ✅ Hủy toàn bộ lịch hẹn (clearChatReminders) thành công!');
+  } else {
+    throw new Error('❌ Hủy toàn bộ lịch hẹn thất bại!');
+  }
+
+  // Dọn dẹp reminder test cũ nếu còn
   await storage.deleteReminder(savedRem.id, testChatId);
-  console.log('  ✅ Đã dọn dẹp lịch hẹn thử nghiệm thành công.');
+  console.log('  ✅ Đã dọn dẹp toàn bộ dữ liệu thử nghiệm.');
 
   // Clean up
   await clearHistory(testChatId);

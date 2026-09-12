@@ -20,6 +20,8 @@ Tôi là trợ lý AI thông minh của HTD Media, luôn sẵn sàng hỗ trợ 
 - \`/reset\` : Xóa ngữ cảnh của cuộc trò chuyện hiện tại để bắt đầu chủ đề mới.
 - \`/summary\` : (Dành cho Nhóm) Tóm tắt các nội dung thảo luận gần nhất, các quyết định và việc cần làm.
 - \`/reminders\` : Xem danh sách các lịch nhắc hẹn đang chờ.
+- \`/xoanhac <STT>\` : Hủy lịch nhắc hẹn theo số thứ tự (ví dụ: \`/xoanhac 1\` hoặc \`/xoanhac all\`).
+
 
 ⏰ **Tạo Nhắc Hẹn Tự Động:**
 - Bạn chỉ cần nói câu bình thường:
@@ -247,11 +249,73 @@ module.exports = async (req, res) => {
       '',
       ...lines,
       '',
+      '💡 _Để hủy lịch nhắc, gõ:_ `/xoanhac <STT>` _(ví dụ: `/xoanhac 1`) hoặc_ `/xoanhac all`',
       '_Bot sẽ tự động gửi tin nhắn thông báo khi đến giờ hẹn nhé!_'
     ].join('\n');
 
     const zaloRes = await sendMessage(chatId, msgReply, 'markdown');
     return res.status(200).json({ ok: true, zalo: zaloRes });
+  }
+
+  // 5.2 Xử lý HỦY / XÓA lịch nhắc hẹn
+  const cancelCmdMatch = rawText.match(/^\/(?:xoanhac|huynhac|delnhac|delreminder|cancelreminder|xoalich|huylich)(?:\s+(.*))?$/i);
+  const allFirstMatch = lowerText.match(/^(?:hủy|xóa|bo|bỏ)\s+(?:tất cả|tat ca|toàn bộ|toan bo|hết|het|all)(?:\s+(?:các\s+)?(?:lịch\s*nhắc|nhắc\s*hẹn|lịch\s*hẹn|lịch|nhắc))?$/i);
+  const naturalMatch = lowerText.match(/^(?:hủy|xóa|bo|bỏ)\s+(?:lịch\s*nhắc|nhắc\s*hẹn|lịch\s*hẹn|lịch|nhắc)\s*(?:số\s*)?(\d+|all|tất cả|tat ca|toàn bộ|toan bo|hết|het)$/i);
+  const shortNumMatch = lowerText.match(/^(?:hủy|xóa|bo|bỏ)\s+(?:số\s*)?(\d+)$/i);
+
+  if (cancelCmdMatch || allFirstMatch || naturalMatch || shortNumMatch) {
+    let rawParam = '';
+    if (cancelCmdMatch) rawParam = (cancelCmdMatch[1] || '').trim();
+    else if (allFirstMatch) rawParam = 'all';
+    else if (naturalMatch) rawParam = naturalMatch[1].trim();
+    else if (shortNumMatch) rawParam = shortNumMatch[1].trim();
+
+    const activeList = await storage.getChatReminders(chatId, senderId);
+
+    if (activeList.length === 0) {
+      const zaloRes = await sendMessage(chatId, '📅 Hiện tại bạn không có lịch nhắc hẹn nào đang chờ để hủy.');
+      return res.status(200).json({ ok: true, zalo: zaloRes });
+    }
+
+    const isAll = ['all', 'tất cả', 'tat ca', 'toàn bộ', 'toan bo', 'hết', 'het'].includes(rawParam.toLowerCase());
+    if (isAll) {
+      const deletedCount = await storage.clearChatReminders(chatId, senderId);
+      const zaloRes = await sendMessage(chatId, `🗑️ **Đã hủy toàn bộ ${deletedCount} lịch nhắc hẹn đang chờ!**`);
+      return res.status(200).json({ ok: true, zalo: zaloRes, deletedCount });
+    }
+
+    // Nếu không nhập tham số
+    if (!rawParam) {
+      if (activeList.length === 1) {
+        // Tự động xóa lịch duy nhất nếu chỉ có 1
+        const target = activeList[0];
+        await storage.deleteReminder(target.id, target.chatId);
+        const timeStr = new Date(target.remindAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' });
+        const dateStr = new Date(target.remindAt).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Asia/Ho_Chi_Minh' });
+        const reply = `🗑️ **Đã hủy lịch nhắc thành công!**\n\n📌 **Nội dung:** ${target.content}\n🕒 **Thời gian đã hẹn:** ${timeStr} ngày ${dateStr}`;
+        const zaloRes = await sendMessage(chatId, reply);
+        return res.status(200).json({ ok: true, zalo: zaloRes });
+      } else {
+        const reply = `💡 Bạn đang có **${activeList.length}** lịch nhắc hẹn đang chờ.\nVui lòng chỉ định số thứ tự cần hủy (ví dụ: \`/xoanhac 1\`) hoặc \`/xoanhac all\` để hủy tất cả.\nGõ \`/reminders\` để xem danh sách.`;
+        const zaloRes = await sendMessage(chatId, reply);
+        return res.status(200).json({ ok: true, zalo: zaloRes });
+      }
+    }
+
+    const index = parseInt(rawParam, 10);
+    if (isNaN(index) || index < 1 || index > activeList.length) {
+      const reply = `⚠️ Không tìm thấy lịch nhắc số **${rawParam}**.\nHiện tại có **${activeList.length}** lịch hẹn đang chờ (gõ \`/reminders\` để kiểm tra danh sách).`;
+      const zaloRes = await sendMessage(chatId, reply);
+      return res.status(200).json({ ok: true, zalo: zaloRes });
+    }
+
+    const target = activeList[index - 1];
+    await storage.deleteReminder(target.id, target.chatId);
+    const timeStr = new Date(target.remindAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' });
+    const dateStr = new Date(target.remindAt).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Asia/Ho_Chi_Minh' });
+    const reply = `🗑️ **Đã hủy lịch nhắc thành công!**\n\n📌 **Nội dung:** ${target.content}\n🕒 **Thời gian đã hẹn:** ${timeStr} ngày ${dateStr}`;
+    const zaloRes = await sendMessage(chatId, reply);
+    return res.status(200).json({ ok: true, zalo: zaloRes, deletedReminder: target });
   }
 
   // 6. Phân tích yêu cầu tạo nhắc hẹn tự động (Ví dụ: "nhắc tôi 15 phút nữa...")

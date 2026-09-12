@@ -287,6 +287,29 @@ async function deleteReminder(reminderId, chatId) {
   return false;
 }
 
+/**
+ * Xóa/Hủy tất cả nhắc hẹn của một cuộc trò chuyện (hoặc của người tạo cụ thể)
+ * @param {string|number} chatId
+ * @param {string|number} [senderId]
+ * @returns {Promise<number>} Số lượng nhắc hẹn đã xóa
+ */
+async function clearChatReminders(chatId, senderId = null) {
+  const idStr = String(chatId || '');
+  const senderStr = senderId ? String(senderId) : null;
+  const reminders = await getAllReminders();
+  const initialLength = reminders.length;
+  const filtered = reminders.filter(r => {
+    const matchChat = idStr && String(r.chatId) === idStr;
+    const matchSender = senderStr && String(r.senderId) === senderStr;
+    return !(matchChat || matchSender);
+  });
+  const deletedCount = initialLength - filtered.length;
+  if (deletedCount > 0) {
+    await saveAllReminders(filtered);
+  }
+  return deletedCount;
+}
+
 module.exports = {
   getConversationHistory,
   saveConversationHistory,
@@ -298,5 +321,7 @@ module.exports = {
   getDueReminders,
   markReminderSent,
   getChatReminders,
-  deleteReminder
+  deleteReminder,
+  clearChatReminders
 };
+
