@@ -5,6 +5,9 @@ const config = require('./config');
 const conversations = new Map();
 const MAX_HISTORY_MESSAGES = 10;
 
+// Con trỏ luân chuyển API Key (Round-robin)
+let currentKeyIndex = 0;
+
 const SYSTEM_INSTRUCTION = `Bạn là Bot HTD Media, một trợ lý AI thông minh, thân thiện, lịch sự và hữu ích trên nền tảng Zalo.
 
 QUY TẮC BẢO MẬT VÀ NHẬN DIỆN (QUAN TRỌNG NHẤT):
@@ -29,8 +32,45 @@ function clearHistory(chatId) {
 }
 
 /**
+ * Lấy danh sách API Keys có sẵn
+ */
+function getApiKeys() {
+  const keys = config.geminiApiKeys && config.geminiApiKeys.length > 0
+    ? config.geminiApiKeys
+    : [config.geminiApiKey].filter(Boolean);
+  return keys;
+}
+
+/**
+ * Lấy danh sách API Keys theo thứ tự xoay vòng (Round-robin)
+ * Giúp cân bằng tải đều giữa các key và tự động chuyển đổi qua lại
+ */
+function getOrderedApiKeys() {
+  const keys = getApiKeys();
+  if (keys.length <= 1) return keys;
+
+  const startIdx = currentKeyIndex % keys.length;
+  currentKeyIndex = (currentKeyIndex + 1) % keys.length;
+
+  const ordered = [];
+  for (let i = 0; i < keys.length; i++) {
+    ordered.push(keys[(startIdx + i) % keys.length]);
+  }
+  return ordered;
+}
+
+/**
+ * Ẩn bớt ký tự API Key khi log để bảo mật
+ */
+function maskKey(key) {
+  if (!key) return 'none';
+  if (key.length <= 10) return '***';
+  return `${key.slice(0, 6)}...${key.slice(-4)}`;
+}
+
+/**
  * Gửi tin nhắn đến AI và nhận câu trả lời
- * Tự động chuyển đổi giữa các model dự phòng nếu gặp lỗi 429 (hết quota) hoặc 503 (quá tải)
+ * Tự động chuyển đổi giữa nhiều API Key và Model dự phòng
  * @param {string|number} chatId - ID cuộc trò chuyện
  * @param {string} userMessage - Nội dung tin nhắn người dùng
  * @returns {Promise<string>} - Nội dung phản hồi từ AI
@@ -50,7 +90,7 @@ async function askGemini(chatId, userMessage) {
     parts: [{ text: userMessage }]
   });
 
-  // 1. Giữ lại số lượng tin nhắn gần nhất
+  // 1. Giới hạn số lượng tin nhắn gần nhất
   if (history.length > MAX_HISTORY_MESSAGES) {
     history.splice(0, history.length - MAX_HISTORY_MESSAGES);
   }
@@ -89,7 +129,7 @@ async function askGemini(chatId, userMessage) {
     }
   };
 
-  // Danh sách model ưu tiên theo thứ tự (Tự động fallback nếu 1 model hết quota/quá tải)
+  // Danh sách model ưu tiên theo thứ tự
   const candidateModels = [
     ...new Set([
       config.geminiModel,
@@ -100,48 +140,55 @@ async function askGemini(chatId, userMessage) {
     ].filter(Boolean))
   ];
 
+  // Danh sách key theo thứ tự xoay vòng
+  const orderedKeys = getOrderedApiKeys();
+
+  // Thử lần lượt qua các model và các API key
   for (const model of candidateModels) {
-    try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${config.geminiApiKey}`;
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-      });
+    for (const apiKey of orderedKeys) {
+      const keyLabel = maskKey(apiKey);
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.warn(`⚠️ Model [${model}] trả về mã ${response.status}: ${errorText.slice(0, 120)}`);
-        // Nếu lỗi (429 hết quota, 503 quá tải, 404 không tồn tại), tự động thử model tiếp theo
-        continue;
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.warn(`⚠️ [Model: ${model} | Key: ${keyLabel}] Mã ${response.status}: ${errorText.slice(0, 100)}`);
+          // Nếu lỗi (429 quota, 403, 404, 503), tự động thử key tiếp theo hoặc model tiếp theo
+          continue;
+        }
+
+        const data = await response.json();
+        const candidate = data.candidates?.[0];
+        const replyText = candidate?.content?.parts?.[0]?.text;
+
+        if (!replyText) {
+          continue;
+        }
+
+        // Lưu phản hồi thành công vào lịch sử
+        history.push({
+          role: 'model',
+          parts: [{ text: replyText }]
+        });
+
+        console.log(`✅ Phản hồi AI thành công [Model: ${model} | Key: ${keyLabel}]`);
+        return replyText;
+      } catch (err) {
+        console.warn(`⚠️ Lỗi kết nối tới [Model: ${model} | Key: ${keyLabel}]:`, err.message);
       }
-
-      const data = await response.json();
-      const candidate = data.candidates?.[0];
-      const replyText = candidate?.content?.parts?.[0]?.text;
-
-      if (!replyText) {
-        continue;
-      }
-
-      // Lưu phản hồi thành công vào lịch sử
-      history.push({
-        role: 'model',
-        parts: [{ text: replyText }]
-      });
-
-      console.log(`✅ Phản hồi AI thành công qua model: ${model}`);
-      return replyText;
-    } catch (err) {
-      console.warn(`⚠️ Lỗi kết nối tới model [${model}]:`, err.message);
     }
   }
 
-  // Nếu tất cả các model đều thất bại:
+  // Nếu tất cả các model và key đều thất bại:
   history.pop();
-  console.error('❌ Tất cả các model AI đều không phản hồi!');
+  console.error('❌ Tất cả các API Key và Model AI đều không phản hồi!');
   return '⚠️ Đã xảy ra lỗi khi kết nối với trí tuệ nhân tạo. Vui lòng thử lại sau ít giây!';
 }
 

@@ -11,6 +11,7 @@ module.exports = async (req, res) => {
       environment: {
         hasZaloBotToken: Boolean(config.zaloBotToken),
         hasGeminiApiKey: Boolean(config.geminiApiKey),
+        totalGeminiKeys: config.geminiApiKeys?.length || 0,
         geminiModel: config.geminiModel,
         hasWebhookSecret: Boolean(config.webhookSecretToken)
       }
