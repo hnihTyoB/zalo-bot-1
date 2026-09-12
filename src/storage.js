@@ -26,7 +26,8 @@ async function callRedisCommand(...args) {
         Authorization: `Bearer ${config.upstashRedisRestToken}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify(args)
+      body: JSON.stringify(args),
+      signal: AbortSignal.timeout(3500)
     });
 
     if (!res.ok) {

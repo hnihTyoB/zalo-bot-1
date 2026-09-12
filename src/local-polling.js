@@ -32,11 +32,10 @@ Tôi là trợ lý AI thông minh của HTD Media, luôn sẵn sàng hỗ trợ 
 - \`/reset\` : Xóa ngữ cảnh của cuộc trò chuyện hiện tại để bắt đầu chủ đề mới.
 - \`/summary\` : (Dành cho Nhóm) Tóm tắt các nội dung thảo luận gần nhất, các quyết định và việc cần làm.
 - \`/reminders\` : Xem danh sách các lịch nhắc hẹn đang chờ.
-- \`/xoanhac <STT>\` : Hủy lịch nhắc hẹn theo số thứ tự (ví dụ: \`/xoanhac 1\` hoặc \`/xoanhac all\`).
+- \`/xoanhac <STT>\` : (Quản trị viên) Hủy lịch nhắc hẹn theo số thứ tự (ví dụ: \`/xoanhac 1\` hoặc \`/xoanhac all\`).
 
-
-⏰ **Tạo Nhắc Hẹn Tự Động:**
-- Bạn chỉ cần nói câu bình thường:
+⏰ **Tạo Nhắc Hẹn Tự Động (Dành riêng cho Quản trị viên):**
+- Quản trị viên chỉ cần nói câu bình thường:
   + *"nhắc tôi 15 phút nữa gọi cho đối tác"*
   + *"nhắc nhóm 16h30 chiều nay nộp báo cáo"*
   + *"nhắc tôi 8h sáng mai kiểm tra server"*
@@ -250,6 +249,15 @@ async function handleMessage(eventData) {
   const shortNumMatch = lowerText.match(/^(?:hủy|xóa|bo|bỏ)\s+(?:số\s*)?(\d+)$/i);
 
   if (cancelCmdMatch || allFirstMatch || naturalMatch || shortNumMatch) {
+    if (!isAdmin) {
+      console.log(`🚫 [Cancel Reminder Blocked] ${senderName} (${senderId}) không phải Quản trị viên.`);
+      await sendMessage(
+        chatId,
+        `⚠️ Xin lỗi **${senderName}**, chỉ có Quản trị viên mới có quyền hủy lịch nhắc hẹn!`
+      );
+      return;
+    }
+
     let rawParam = '';
     if (cancelCmdMatch) rawParam = (cancelCmdMatch[1] || '').trim();
     else if (allFirstMatch) rawParam = 'all';
@@ -306,6 +314,15 @@ async function handleMessage(eventData) {
   // 3. Phân tích yêu cầu tạo nhắc hẹn tự động (Ví dụ: "nhắc tôi 15 phút nữa...")
   const reminderCheck = await parseReminderIntent(rawText);
   if (reminderCheck && reminderCheck.isReminder) {
+    if (!isAdmin) {
+      console.log(`🚫 [Reminder Blocked] ${senderName} (${senderId}) không phải Quản trị viên cố tạo nhắc hẹn.`);
+      await sendMessage(
+        chatId,
+        `⚠️ Xin lỗi **${senderName}**, tính năng tạo lịch nhắc hẹn chỉ dành riêng cho Quản trị viên (@Admin)!`
+      );
+      return;
+    }
+
     const saved = await storage.addReminder({
       chatId,
       senderId,
