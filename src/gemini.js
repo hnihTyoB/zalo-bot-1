@@ -406,17 +406,42 @@ Hãy đóng vai trò Thư ký AI chuyên nghiệp của HTD Media và lập mộ
  * Kiểm tra xem tin nhắn có mang ý định đặt nhắc hẹn không
  */
 function looksLikeReminder(text) {
-  const t = text.toLowerCase();
+  if (!text || typeof text !== 'string') return false;
+  const t = text.trim().toLowerCase();
+
+  // Bỏ qua các lệnh xem danh sách nhắc hẹn
+  if (
+    t === '/reminders' ||
+    t === '/reminder' ||
+    t === 'lịch hẹn' ||
+    t === 'lịch nhắc' ||
+    t.startsWith('/reminders') ||
+    t.includes('danh sách nhắc') ||
+    t.includes('danh sách lịch')
+  ) {
+    return false;
+  }
+
+  // Bỏ qua câu hỏi thông thường như: "nhắc lại", "đừng nhắc"
+  if (
+    t.includes('nhắc lại') &&
+    (t.includes('được không') || t.includes('giúp') || t.includes('câu') || t.includes('kiến thức') || t.includes('bài'))
+  ) {
+    return false;
+  }
+  if (t.includes('đừng nhắc') || t.includes('không nhắc')) {
+    return false;
+  }
+
+  // Nhận diện mọi biến thể liên quan đến nhắc nhở / hẹn giờ / đặt lịch / báo thức
   return (
-    t.includes('nhắc tôi') ||
-    t.includes('nhắc em') ||
-    t.includes('nhắc mình') ||
-    t.includes('nhắc bạn') ||
-    t.includes('nhắc nhóm') ||
-    t.includes('nhắc hẹn') ||
+    t.includes('nhắc') ||
     t.includes('hẹn giờ') ||
-    t.includes('đặt lịch nhắc') ||
-    t.includes('đặt nhắc hẹn') ||
+    t.includes('lịch hẹn') ||
+    t.includes('đặt lịch') ||
+    t.includes('tạo lịch') ||
+    t.includes('lên lịch') ||
+    t.includes('báo thức') ||
     t.startsWith('/remind') ||
     t.startsWith('/nhac')
   );
@@ -427,13 +452,23 @@ function looksLikeReminder(text) {
  */
 function tryQuickRegexReminder(text) {
   const t = text.trim();
-  const relMatch = t.match(/nhắc\s+(?:tôi|em|mình|nhóm|bạn)?\s*(?:sau)?\s*(\d+)\s*(phút|giờ|tiếng|giây)\s*(?:nữa)?(?:\s+là|\s*:|\s+về|\s+để)?\s*(.*)/i);
-  if (relMatch) {
-    const num = parseInt(relMatch[1], 10);
-    const unit = relMatch[2].toLowerCase();
-    let content = relMatch[3].trim();
+
+  // Mẫu 1: [tạo/đặt/lên lịch] [nhắc/hẹn] [tôi/em/mình/nhóm/bạn] [sau] X phút/giờ/tiếng [nữa] [nội dung]
+  // Ví dụ: "tạo lịch nhắc 15 phút nữa uống nước", "nhắc tôi sau 1 giờ họp", "nhắc 10 phút nữa tắt bếp"
+  let match = t.match(/(?:(?:tạo|đặt|lên)\s*(?:lịch\s*)?)?(?:nhắc(?:\s+nhở|\s+hẹn)?|hẹn(?:\s+giờ)?)\s*(?:cho\s+)?(?:tôi|em|mình|nhóm|bạn)?\s*(?:sau\s*)?(\d+)\s*(phút|giờ|tiếng|giây)\s*(?:nữa)?(?:\s+là|\s*:|\s+về|\s+để)?\s*(.*)/i);
+
+  // Mẫu 2: sau X phút/giờ/tiếng [nữa] nhắc [tôi/em/mình/nhóm/bạn] [nội dung]
+  if (!match) {
+    match = t.match(/sau\s*(\d+)\s*(phút|giờ|tiếng|giây)\s*(?:nữa)?\s*(?:hãy\s*)?nhắc(?:\s+nhở|\s+hẹn)?\s*(?:cho\s+)?(?:tôi|em|mình|nhóm|bạn)?(?:\s+là|\s*:|\s+về|\s+để)?\s*(.*)/i);
+  }
+
+  if (match) {
+    const num = parseInt(match[1], 10);
+    const unit = match[2].toLowerCase();
+    let content = match[3] ? match[3].trim() : '';
+    // Lược bỏ các từ thừa ở đầu nội dung như "nhé", "nha", "ạ", "đi", "giúp", "hộ", "giùm"
+    content = content.replace(/^(nhé|nha|ạ|đi|giùm|hộ|giúp tôi|giúp em|giúp mình)\s*/i, '').trim();
     if (!content) content = 'Công việc đã lên lịch';
-    content = content.replace(/^(nhé|nha|ạ|đi|giùm|hộ)\s*/i, '').trim();
 
     let ms = 0;
     if (unit === 'phút') ms = num * 60 * 1000;
@@ -481,22 +516,26 @@ async function parseReminderIntent(userMessage) {
   const prompt = `Thời điểm hiện tại tại Việt Nam (GMT+7) là: ${nowStr} (Timestamp ms: ${now.getTime()}).
 Người dùng gửi tin nhắn: "${userMessage}"
 
-Hãy xác định xem người dùng có đang yêu cầu đặt lịch hẹn/nhắc nhở (reminder) không.
-Nếu CÓ, hãy tính toán chính xác timestamp (mili-giây tính từ Unix epoch) đến thời điểm cần nhắc, nội dung cần nhắc và lời xác nhận thân thiện.
-Lưu ý: Thời điểm cần nhắc phải ở tương lai so với thời điểm hiện tại.
-Nếu KHÔNG hoặc câu nói mơ hồ không xác định được thời điểm, trả về isReminder: false.
+Hãy phân tích xem người dùng có muốn đặt lịch hẹn, tạo lịch nhắc, nhắc nhở hoặc báo thức cho một thời điểm cụ thể trong tương lai không.
+Nếu CÓ:
+- Xác định thời điểm cần nhắc (phải ở tương lai so với thời điểm hiện tại).
+- Tính toán chính xác targetTimestamp (mili-giây tính từ Unix epoch).
+- Trích xuất nội dung công việc cần nhắc (ngắn gọn, súc tích).
+- Tạo câu xác nhận thân thiện.
+Nếu KHÔNG hoặc câu nói không có mốc thời gian cụ thể trong tương lai, trả về isReminder: false.
 
 CHỈ trả về một JSON object duy nhất:
 {
   "isReminder": true,
-  "content": "nội dung công việc cần nhắc ngắn gọn",
+  "content": "nội dung công việc cần nhắc",
   "targetTimestamp": 1789195000000,
   "formattedTime": "HH:mm ngày DD/MM/YYYY",
-  "confirmationMessage": "Dạ, tôi đã lên lịch nhắc bạn '...' vào lúc HH:mm ngày DD/MM/YYYY rồi nhé."
+  "confirmationMessage": "⏰ **Đã đặt nhắc hẹn:** '...' lúc HH:mm ngày DD/MM/YYYY!"
 }`;
 
   const payload = {
     contents: [{ role: 'user', parts: [{ text: prompt }] }],
+    safetySettings: SAFETY_SETTINGS,
     generationConfig: {
       temperature: 0.1,
       responseMimeType: 'application/json'

@@ -206,8 +206,26 @@ module.exports = async (req, res) => {
   }
 
   // 5. Lệnh xem danh sách nhắc hẹn (/reminders)
-  if (rawText === '/reminders' || rawText.toLowerCase() === 'lịch hẹn' || rawText.toLowerCase().includes('danh sách nhắc')) {
-    const activeList = await storage.getChatReminders(chatId);
+  const lowerText = rawText.toLowerCase();
+  const isViewRemindersCmd = (
+    rawText === '/reminders' ||
+    rawText === '/reminder' ||
+    rawText === '/remind' ||
+    rawText === '/lich' ||
+    rawText === '/lichnhac' ||
+    rawText === '/lichhen' ||
+    lowerText === 'lịch hẹn' ||
+    lowerText === 'lịch nhắc' ||
+    lowerText === 'xem lịch hẹn' ||
+    lowerText === 'xem lịch nhắc' ||
+    lowerText.includes('danh sách nhắc') ||
+    lowerText.includes('danh sách lịch') ||
+    lowerText.includes('lịch hẹn của') ||
+    lowerText.includes('lịch nhắc của')
+  );
+
+  if (isViewRemindersCmd) {
+    const activeList = await storage.getChatReminders(chatId, senderId);
     if (activeList.length === 0) {
       const zaloRes = await sendMessage(chatId, '📅 Hiện tại bạn không có lịch nhắc hẹn nào đang chờ.');
       return res.status(200).json({ ok: true, zalo: zaloRes });

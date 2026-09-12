@@ -250,16 +250,22 @@ async function markReminderSent(reminderId) {
 }
 
 /**
- * Lấy danh sách nhắc hẹn đang chờ của một cuộc trò chuyện
+ * Lấy danh sách nhắc hẹn đang chờ của một cuộc trò chuyện hoặc người dùng
  * @param {string|number} chatId
+ * @param {string|number} [senderId]
  * @returns {Promise<Array>}
  */
-async function getChatReminders(chatId) {
-  const idStr = String(chatId);
+async function getChatReminders(chatId, senderId = null) {
+  const idStr = String(chatId || '');
+  const senderStr = senderId ? String(senderId) : null;
   const now = Date.now();
   const reminders = await getAllReminders();
   return reminders
-    .filter(r => String(r.chatId) === idStr && Number(r.remindAt) > now)
+    .filter(r => {
+      const matchChat = idStr && String(r.chatId) === idStr;
+      const matchSender = senderStr && String(r.senderId) === senderStr;
+      return (matchChat || matchSender) && Number(r.remindAt) > now;
+    })
     .sort((a, b) => a.remindAt - b.remindAt);
 }
 
