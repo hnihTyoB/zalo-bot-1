@@ -98,6 +98,7 @@ module.exports = async (req, res) => {
   const senderId = String(msg.from?.id || chatId || '');
   const senderName = msg.from?.display_name || 'Bạn';
   const chatType = msg.chat?.chat_type || 'PRIVATE';
+  const botId = config.zaloBotToken ? config.zaloBotToken.split(':')[0] : '';
   const isAdmin = config.adminUserIds.includes(senderId);
   const isBlocked = await storage.isUserBlocked(senderId);
 
@@ -181,8 +182,8 @@ module.exports = async (req, res) => {
     });
   }
 
-  // Xóa tên bot nếu được mention trong nhóm
-  rawText = rawText.replace(/@?Bot HTD Media/gi, '').trim();
+  // Xóa tên bot nếu được mention trong nhóm (@Bot HTD Media, @Bot, @HTD Media...)
+  rawText = rawText.replace(/@?(?:Bot\s*HTD\s*Media|Bot|HTD\s*Media)\b/gi, '').trim();
 
   // 4. Lệnh tóm tắt thảo luận nhóm (/summary)
   if (rawText.startsWith('/summary') || rawText.toLowerCase().includes('tóm tắt')) {
@@ -388,10 +389,14 @@ module.exports = async (req, res) => {
   if (quoted?.from?.id) {
     contextTargetId = String(quoted.from.id);
     contextTargetName = quoted.from.display_name || '';
-  } else if (Array.isArray(msg.mentions) && msg.mentions.length > 0) {
-    const m = msg.mentions[0];
-    const uid = m.uid || m.user_id || m.id;
-    if (uid) contextTargetId = String(uid);
+  } else if (Array.isArray(msg.mentions)) {
+    const validMention = msg.mentions.find(m => {
+      const uid = String(m.uid || m.user_id || m.id || '');
+      return uid && uid !== botId && uid !== senderId;
+    });
+    if (validMention) {
+      contextTargetId = String(validMention.uid || validMention.user_id || validMention.id);
+    }
   }
 
   // Nhận diện lệnh kể cả khi Zalo tự chèn "@Tên " lúc bấm Reply (ví dụ: "@Long /block", "@Long /unblock", "@Long /id")

@@ -161,12 +161,8 @@ async function handleMessage(eventData) {
     });
   }
 
-  // Xóa tên bot nếu được mention trong group (ví dụ: "@Bot HTD Media xin chào")
-  if (botInfo && rawText.includes(botInfo.display_name)) {
-    rawText = rawText
-      .replace(new RegExp(`@?${botInfo.display_name}`, "gi"), "")
-      .trim();
-  }
+  // Xóa tên bot nếu được mention trong group (ví dụ: "@Bot HTD Media", "@Bot", "@HTD Media")
+  rawText = rawText.replace(/@?(?:Bot\s*HTD\s*Media|Bot|HTD\s*Media)\b/gi, "").trim();
 
   // 1. Lệnh tóm tắt thảo luận nhóm (/summary)
   if (rawText.startsWith("/summary") || rawText.toLowerCase().includes("tóm tắt")) {
@@ -371,13 +367,18 @@ async function handleMessage(eventData) {
   const quoted = msg.quote || msg.reply_to || msg.quoted_message;
   let contextTargetId = '';
   let contextTargetName = '';
+  const currentBotId = botInfo?.id ? String(botInfo.id) : (config.zaloBotToken ? config.zaloBotToken.split(':')[0] : '');
   if (quoted?.from?.id) {
     contextTargetId = String(quoted.from.id);
     contextTargetName = quoted.from.display_name || '';
-  } else if (Array.isArray(msg.mentions) && msg.mentions.length > 0) {
-    const m = msg.mentions[0];
-    const uid = m.uid || m.user_id || m.id;
-    if (uid) contextTargetId = String(uid);
+  } else if (Array.isArray(msg.mentions)) {
+    const validMention = msg.mentions.find(m => {
+      const uid = String(m.uid || m.user_id || m.id || '');
+      return uid && uid !== currentBotId && uid !== senderId;
+    });
+    if (validMention) {
+      contextTargetId = String(validMention.uid || validMention.user_id || validMention.id);
+    }
   }
 
   // Nhận diện lệnh kể cả khi Zalo tự chèn "@Tên " lúc bấm Reply (ví dụ: "@Long /block", "@Long /unblock", "@Long /id")
