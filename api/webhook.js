@@ -381,23 +381,39 @@ module.exports = async (req, res) => {
     return res.status(200).json({ ok: true, zalo: zaloRes });
   }
 
-  if (rawText === '/id' || rawText === '/myid' || rawText === '/whois') {
-    const quoted = msg.quote || msg.reply_to || msg.quoted_message;
-    if (quoted && quoted.from?.id) {
-      const targetName = quoted.from.display_name || 'Người dùng';
-      const targetId = String(quoted.from.id);
-      const isTargetAdmin = config.adminUserIds.includes(targetId);
-      const isTargetBlocked = config.blockedUserIds.includes(targetId);
+  // Trích xuất thông tin người được trả lời (quote/reply) hoặc được mention (@Tên)
+  const quoted = msg.quote || msg.reply_to || msg.quoted_message;
+  let contextTargetId = '';
+  let contextTargetName = '';
+  if (quoted?.from?.id) {
+    contextTargetId = String(quoted.from.id);
+    contextTargetName = quoted.from.display_name || '';
+  } else if (Array.isArray(msg.mentions) && msg.mentions.length > 0) {
+    const m = msg.mentions[0];
+    const uid = m.uid || m.user_id || m.id;
+    if (uid) contextTargetId = String(uid);
+  }
+
+  // Nhận diện lệnh kể cả khi Zalo tự chèn "@Tên " lúc bấm Reply (ví dụ: "@Long /block", "@Long /unblock", "@Long /id")
+  const cmdMatch = rawText.match(/(?:^|\s)\/(id|myid|whois|blocklist|block|unblock)(?:\s+(.*))?$/i);
+  const matchedCmd = cmdMatch ? '/' + cmdMatch[1].toLowerCase() : null;
+  const cmdParam = (cmdMatch && cmdMatch[2] ? cmdMatch[2].trim() : '');
+  const explicitId = (cmdParam && !cmdParam.startsWith('@') && /^[a-zA-Z0-9_-]{8,45}$/.test(cmdParam)) ? cmdParam : '';
+
+  if (matchedCmd === '/id' || matchedCmd === '/myid' || matchedCmd === '/whois') {
+    if (contextTargetId) {
+      const isTargetAdmin = config.adminUserIds.includes(contextTargetId);
+      const isTargetBlocked = await storage.isUserBlocked(contextTargetId);
       const statusStr = isTargetBlocked ? '🚫 Đang bị chặn' : (isTargetAdmin ? '⭐ Quản trị viên (Admin)' : '👥 Thành viên');
 
       const reply = [
         '{big}{green}🆔 THÔNG TIN NGƯỜI DÙNG ĐƯỢC TRẢ LỜI{/green}{/big}',
         '',
-        `👤 **Họ tên:** ${targetName}`,
-        `🔑 **Zalo User ID:** \`${targetId}\``,
+        `👤 **Họ tên:** ${contextTargetName || 'Người dùng'}`,
+        `🔑 **Zalo User ID:** \`${contextTargetId}\``,
         `🔰 **Trạng thái:** ${statusStr}`,
         '',
-        '_💡 Bạn có thể copy ID này để cấu hình Quản trị viên (ADMIN_USER_IDS) hoặc chặn (BLOCKED_USER_IDS) trong file .env._'
+        '_💡 Bạn có thể dùng lệnh `/block` để chặn hoặc `/unblock` để gỡ chặn người này._'
       ].join('\n');
       const zaloRes = await sendMessage(chatId, reply, 'markdown');
       return res.status(200).json({ ok: true, zalo: zaloRes });
@@ -418,13 +434,13 @@ module.exports = async (req, res) => {
   }
 
   // 7.2 Lệnh quản trị danh sách chặn: /block, /unblock, /blocklist (Chỉ Admin)
-  if (rawText.startsWith('/block') || rawText.startsWith('/unblock') || rawText === '/blocklist') {
+  if (matchedCmd === '/block' || matchedCmd === '/unblock' || matchedCmd === '/blocklist') {
     if (!isAdmin) {
       const zaloRes = await sendMessage(chatId, `⚠️ Xin lỗi **${senderName}**, chỉ có Quản trị viên mới có quyền quản lý danh sách chặn!`);
       return res.status(200).json({ ok: true, blocked: true, zalo: zaloRes });
     }
 
-    if (rawText === '/blocklist') {
+    if (matchedCmd === '/blocklist') {
       const list = await storage.getBlockedUsers();
       if (list.length === 0 && (!config.blockedUserIds || config.blockedUserIds.length === 0)) {
         const zaloRes = await sendMessage(chatId, '📋 Danh sách chặn hiện đang trống.');
@@ -444,31 +460,23 @@ module.exports = async (req, res) => {
       return res.status(200).json({ ok: true, zalo: zaloRes });
     }
 
-    if (rawText.startsWith('/unblock')) {
-      const quoted = msg.quote || msg.reply_to || msg.quoted_message;
-      let targetId = rawText.replace(/^\/unblock/i, '').trim();
-      if (!targetId && quoted?.from?.id) {
-        targetId = String(quoted.from.id);
-      }
+    if (matchedCmd === '/unblock') {
+      const targetId = explicitId || contextTargetId;
       if (!targetId) {
-        const zaloRes = await sendMessage(chatId, '💡 Vui lòng nhập ID cần gỡ chặn: `/unblock <Zalo_User_ID>` hoặc reply tin nhắn của họ.');
+        const zaloRes = await sendMessage(chatId, '💡 Vui lòng nhập ID cần gỡ chặn: `/unblock <Zalo_User_ID>` hoặc bấm Reply tin nhắn của họ.');
         return res.status(200).json({ ok: true, zalo: zaloRes });
       }
       await storage.removeBlockedUser(targetId);
-      const zaloRes = await sendMessage(chatId, `✅ Đã gỡ chặn cho người dùng có ID: \`${targetId}\`!`);
+      const targetLabel = contextTargetName ? `cho **${contextTargetName}** (ID: \`${targetId}\`)` : `cho ID \`${targetId}\``;
+      const zaloRes = await sendMessage(chatId, `✅ Đã gỡ chặn thành công ${targetLabel}! Người này có thể trò chuyện lại với bot.`);
       return res.status(200).json({ ok: true, zalo: zaloRes });
     }
 
-    if (rawText.startsWith('/block')) {
-      const quoted = msg.quote || msg.reply_to || msg.quoted_message;
-      let targetId = rawText.replace(/^\/block/i, '').trim();
-      let targetName = '';
-      if (!targetId && quoted?.from?.id) {
-        targetId = String(quoted.from.id);
-        targetName = quoted.from.display_name || '';
-      }
+    if (matchedCmd === '/block') {
+      const targetId = explicitId || contextTargetId;
+      const targetName = contextTargetName || '';
       if (!targetId) {
-        const zaloRes = await sendMessage(chatId, '💡 Vui lòng chỉ định ID: `/block <Zalo_User_ID>` hoặc reply tin nhắn của người cần chặn và gõ `/block`.');
+        const zaloRes = await sendMessage(chatId, '💡 Vui lòng chỉ định ID: `/block <Zalo_User_ID>` hoặc bấm Reply tin nhắn của người cần chặn và gõ `/block`.');
         return res.status(200).json({ ok: true, zalo: zaloRes });
       }
       if (config.adminUserIds.includes(targetId)) {
