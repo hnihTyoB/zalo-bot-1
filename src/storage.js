@@ -367,6 +367,9 @@ async function removeBlockedUser(userId) {
   if (config.upstashRedisRestUrl && config.upstashRedisRestToken) {
     await callRedisCommand('SET', REDIS_BLOCKED_KEY, JSON.stringify(filtered));
   }
+  if (Array.isArray(config.blockedUserIds)) {
+    config.blockedUserIds = config.blockedUserIds.filter(id => id !== idStr);
+  }
   return true;
 }
 
