@@ -311,6 +311,82 @@ async function clearChatReminders(chatId, senderId = null) {
   return deletedCount;
 }
 
+// ==========================================
+// QUẢN LÝ DANH SÁCH CHẶN (BLACKLIST)
+// ==========================================
+const REDIS_BLOCKED_KEY = 'zalo:blocked:list';
+let memoryBlocked = [];
+
+/**
+ * Lấy danh sách ID người dùng bị chặn (kết hợp Redis và .env)
+ * @returns {Promise<Array<{ id: string, name?: string, blockedAt?: number }>>}
+ */
+async function getBlockedUsers() {
+  if (config.upstashRedisRestUrl && config.upstashRedisRestToken) {
+    const raw = await callRedisCommand('GET', REDIS_BLOCKED_KEY);
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return parsed;
+      } catch (e) {}
+    }
+  }
+  return memoryBlocked;
+}
+
+/**
+ * Thêm người dùng vào danh sách chặn
+ * @param {string} userId
+ * @param {string} [userName]
+ * @returns {Promise<boolean>}
+ */
+async function addBlockedUser(userId, userName = '') {
+  const idStr = String(userId).trim();
+  if (!idStr) return false;
+  const current = await getBlockedUsers();
+  if (!current.some(u => (typeof u === 'string' ? u : u.id) === idStr)) {
+    current.push({ id: idStr, name: userName, blockedAt: Date.now() });
+    memoryBlocked = current;
+    if (config.upstashRedisRestUrl && config.upstashRedisRestToken) {
+      await callRedisCommand('SET', REDIS_BLOCKED_KEY, JSON.stringify(current));
+    }
+  }
+  return true;
+}
+
+/**
+ * Gỡ người dùng khỏi danh sách chặn
+ * @param {string} userId
+ * @returns {Promise<boolean>}
+ */
+async function removeBlockedUser(userId) {
+  const idStr = String(userId).trim();
+  const current = await getBlockedUsers();
+  const filtered = current.filter(u => (typeof u === 'string' ? u : u.id) !== idStr);
+  memoryBlocked = filtered;
+  if (config.upstashRedisRestUrl && config.upstashRedisRestToken) {
+    await callRedisCommand('SET', REDIS_BLOCKED_KEY, JSON.stringify(filtered));
+  }
+  return true;
+}
+
+/**
+ * Kiểm tra xem người dùng có bị chặn hay không
+ * @param {string} userId
+ * @returns {Promise<boolean>}
+ */
+async function isUserBlocked(userId) {
+  const idStr = String(userId).trim();
+  if (!idStr) return false;
+  // Kiểm tra cấu hình tĩnh .env trước
+  if (config.blockedUserIds && config.blockedUserIds.includes(idStr)) {
+    return true;
+  }
+  // Kiểm tra danh sách động trên Redis
+  const blockedList = await getBlockedUsers();
+  return blockedList.some(u => (typeof u === 'string' ? u : u.id) === idStr);
+}
+
 module.exports = {
   getConversationHistory,
   saveConversationHistory,
@@ -323,6 +399,11 @@ module.exports = {
   markReminderSent,
   getChatReminders,
   deleteReminder,
-  clearChatReminders
+  clearChatReminders,
+  getBlockedUsers,
+  addBlockedUser,
+  removeBlockedUser,
+  isUserBlocked
 };
+
 
