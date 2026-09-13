@@ -209,6 +209,142 @@ function findImageUrl(data, eventData, msg) {
   return null;
 }
 
+/**
+ * Trích xuất người dùng mục tiêu một cách thông minh và toàn diện
+ * Phục vụ các lệnh quản trị: /block, /unblock, /id, /whois
+ */
+function resolveTargetUser({
+  rawText = '',
+  cmdParam = '',
+  msg = {},
+  eventData = {},
+  data = {},
+  senderId = '',
+  botId = '',
+  groupMessages = []
+}) {
+  let targetId = '';
+  let targetName = '';
+
+  // 1. Kiểm tra ID rõ ràng trong tham số lệnh hoặc trong nội dung tin nhắn (chuỗi 8-45 ký tự)
+  if (cmdParam && !cmdParam.startsWith('@') && /^[a-zA-Z0-9_-]{8,45}$/.test(cmdParam)) {
+    targetId = cmdParam;
+  }
+
+  if (!targetId) {
+    const idCandidates = rawText.match(/\b([a-zA-Z0-9_-]{12,45})\b/g) || [];
+    for (const cand of idCandidates) {
+      const lower = cand.toLowerCase();
+      if (
+        cand !== botId &&
+        cand !== senderId &&
+        !['block', 'unblock', 'blocklist', 'reminders', 'xoanhac', 'summary'].includes(lower)
+      ) {
+        if (/^[a-fA-F0-9]{16,40}$/.test(cand) || /^[a-zA-Z0-9_-]{12,45}$/.test(cand)) {
+          targetId = cand;
+          break;
+        }
+      }
+    }
+  }
+
+  // 2. Kiểm tra quoted / reply message trên mọi cấu trúc payload khả dĩ của Zalo / Telegram
+  const quoted = msg?.reply_to_message || msg?.quote || msg?.reply_to || msg?.quoted_message
+              || eventData?.reply_to_message || eventData?.quote || eventData?.reply_to
+              || data?.reply_to_message || data?.quote;
+
+  if (quoted) {
+    const qId = quoted.from?.id || quoted.from_id || quoted.sender_id || quoted.sender?.id
+             || quoted.uid || quoted.user_id || quoted.owner_id || quoted.author?.id
+             || quoted.message?.from?.id || quoted.msg?.from?.id;
+    const qName = quoted.from?.display_name || quoted.from?.name || quoted.from_name
+               || quoted.sender_name || quoted.sender?.name || quoted.display_name || quoted.name
+               || quoted.from?.first_name;
+
+    if (qId && String(qId) !== botId && String(qId) !== senderId) {
+      if (!targetId) targetId = String(qId);
+      if (!targetName && qName) targetName = String(qName);
+    }
+
+    // Nếu quoted có text, tìm người gửi tin nhắn có text đó trong groupMessages
+    const qText = quoted.text || quoted.content || quoted.message?.text || quoted.msg?.text;
+    if (!targetId && qText && groupMessages.length > 0) {
+      const matchedMsg = groupMessages.slice().reverse().find(m =>
+        m.senderId !== botId && m.senderId !== senderId && (m.text?.includes(qText) || qText.includes(m.text))
+      );
+      if (matchedMsg) {
+        targetId = matchedMsg.senderId;
+        targetName = matchedMsg.senderName;
+      }
+    }
+  }
+
+  // 3. Kiểm tra mảng mentions từ msg / eventData / data
+  const mentions = msg?.mentions || eventData?.mentions || data?.mentions || msg?.entities || eventData?.entities;
+  if (!targetId && Array.isArray(mentions)) {
+    const validMention = mentions.find(m => {
+      const uid = String(m.uid || m.user_id || m.id || m.user?.id || m.target_id || '');
+      return uid && uid !== botId && uid !== senderId;
+    });
+    if (validMention) {
+      targetId = String(validMention.uid || validMention.user_id || validMention.id || validMention.user?.id || validMention.target_id);
+      targetName = validMention.display_name || validMention.name || validMention.user?.first_name || '';
+    }
+  }
+
+  // 4. Nếu chưa có targetId, quét các tên được mention (@Tên) trong text
+  // và so khớp với danh sách người gửi gần nhất trong groupMessages
+  if (!targetId && groupMessages.length > 0) {
+    const matches = [...rawText.matchAll(/@([^@/]+)/g)].map(m => m[1].trim());
+    for (const mention of matches) {
+      if (/(?:Bot\s*HTD\s*Media|Bot|HTD\s*Media)/i.test(mention)) continue;
+      const tName = mention.toLowerCase();
+
+      // Khớp chính xác trước
+      let found = groupMessages.slice().reverse().find(m => {
+        if (m.senderId === botId || m.senderId === senderId) return false;
+        const sName = (m.senderName || '').toLowerCase();
+        return sName === tName;
+      });
+
+      // Khớp một phần nếu không có khớp chính xác
+      if (!found) {
+        found = groupMessages.slice().reverse().find(m => {
+          if (m.senderId === botId || m.senderId === senderId) return false;
+          const sName = (m.senderName || '').toLowerCase();
+          return sName.includes(tName) || tName.includes(sName);
+        });
+      }
+
+      if (found) {
+        targetId = found.senderId;
+        targetName = found.senderName;
+        break;
+      }
+    }
+  }
+
+  // 5. Nếu là thao tác Reply (có quoted object) nhưng quoted không chứa ID người gửi:
+  // Fallback lấy tin nhắn gần nhất của người khác (không phải admin, không phải bot) trong bộ đệm nhóm
+  if (!targetId && quoted && groupMessages.length > 0) {
+    const lastOtherMsg = groupMessages.slice().reverse().find(m => m.senderId !== botId && m.senderId !== senderId);
+    if (lastOtherMsg) {
+      targetId = lastOtherMsg.senderId;
+      targetName = lastOtherMsg.senderName;
+    }
+  }
+
+  // 6. Điền tên người dùng từ groupMessages nếu đã có ID nhưng chưa có tên hiển thị
+  if (targetId && !targetName && groupMessages.length > 0) {
+    const found = groupMessages.slice().reverse().find(m => m.senderId === targetId);
+    if (found?.senderName) {
+      targetName = found.senderName;
+    }
+  }
+
+  return { targetId, targetName };
+}
+
 module.exports = {
   getMe,
   sendMessage,
@@ -218,5 +354,6 @@ module.exports = {
   deleteWebhook,
   getWebhookInfo,
   formatStyles,
-  findImageUrl
+  findImageUrl,
+  resolveTargetUser
 };
