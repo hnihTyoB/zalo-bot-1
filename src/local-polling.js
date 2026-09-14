@@ -183,30 +183,25 @@ async function handleMessage(eventData) {
     const photoUrl = 'https://zalo-bot-1.vercel.app/stk.jpg';
     const fallbackPhotoUrl = 'https://raw.githubusercontent.com/hnihTyoB/zalo-bot-1/main/public/stk.jpg';
     const caption = [
-      '💳 **THÔNG TIN TÀI KHOẢN NGÂN HÀNG (STK)**',
-      '',
-      '🏦 **Ngân hàng:** Sacombank (Napas 247)',
-      '🔢 **Số tài khoản:** `070120022431`',
-      '👤 **Chủ tài khoản:** NGUYEN CHI THINH',
-      '📝 **Nội dung:** CHUYEN TIEN NHANH QUA QR',
-      '',
-      '_💡 Quét mã QR trên ảnh để chuyển khoản nhanh chóng và chính xác!_'
+      '🏦 Ngân hàng: Sacombank (Napas 247)',
+      '🔢 STK: 070120022431',
+      '👤 Chủ tài khoản: NGUYEN CHI THINH'
     ].join('\n');
 
     await sendChatAction(chatId, 'upload_photo');
 
     let zaloRes = null;
     try {
-      zaloRes = await sendPhoto(chatId, photoUrl, caption, 'markdown');
+      zaloRes = await sendPhoto(chatId, photoUrl, caption);
       if (!zaloRes?.ok) {
-        zaloRes = await sendPhoto(chatId, fallbackPhotoUrl, caption, 'markdown');
+        zaloRes = await sendPhoto(chatId, fallbackPhotoUrl, caption);
       }
     } catch (photoErr) {
       console.warn('⚠️ Lỗi gửi ảnh STK qua sendPhoto:', photoErr.message);
     }
 
     if (!zaloRes || !zaloRes.ok) {
-      await sendMessage(chatId, caption, 'markdown');
+      await sendMessage(chatId, caption, null);
     }
 
     return;
