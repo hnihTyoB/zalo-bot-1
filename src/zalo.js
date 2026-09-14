@@ -102,6 +102,27 @@ async function sendMessage(chatId, text, parseMode = 'markdown') {
 }
 
 /**
+ * Gửi hình ảnh đến người dùng hoặc nhóm
+ * @param {string} chatId
+ * @param {string} photoUrl URL công khai của hình ảnh
+ * @param {string} [caption] Chú thích kèm theo ảnh
+ * @param {'markdown'|'html'|null} [parseMode]
+ */
+async function sendPhoto(chatId, photoUrl, caption = '', parseMode = 'markdown') {
+  const payload = {
+    chat_id: String(chatId),
+    photo: String(photoUrl)
+  };
+  if (caption) {
+    payload.caption = caption;
+    if (parseMode) {
+      payload.parse_mode = parseMode;
+    }
+  }
+  return await callApi('sendPhoto', payload);
+}
+
+/**
  * Nhận tin nhắn mới theo cơ chế Long Polling
  * @param {number} timeout Thời gian chờ tính bằng giây
  */
@@ -348,6 +369,7 @@ function resolveTargetUser({
 module.exports = {
   getMe,
   sendMessage,
+  sendPhoto,
   sendChatAction,
   getUpdates,
   setWebhook,

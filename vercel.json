@@ -8,6 +8,14 @@
     {
       "source": "/api/cron-reminders",
       "destination": "/api/cron-reminders.js"
+    },
+    {
+      "source": "/api/stk",
+      "destination": "/api/stk.js"
+    },
+    {
+      "source": "/stk.jpg",
+      "destination": "/api/stk.js"
     }
   ]
 }

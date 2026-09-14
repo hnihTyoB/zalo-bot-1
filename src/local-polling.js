@@ -4,6 +4,7 @@ const {
   deleteWebhook,
   getUpdates,
   sendMessage,
+  sendPhoto,
   sendChatAction,
   findImageUrl,
   resolveTargetUser,
@@ -35,6 +36,7 @@ Tôi là trợ lý AI thông minh của HTD Media, luôn sẵn sàng hỗ trợ 
 - \`/reminders\` : Xem danh sách các lịch nhắc hẹn đang chờ.
 - \`/xoanhac <STT>\` : (Quản trị viên) Hủy lịch nhắc hẹn theo số thứ tự (ví dụ: \`/xoanhac 1\` hoặc \`/xoanhac all\`).
 - \`/id\` : Xem Zalo ID của bạn (hoặc reply tin nhắn của người khác kèm \`/id\` để xem ID của họ).
+- \`/stk\` : Xem thông tin tài khoản ngân hàng và mã QR chuyển khoản.
 
 ⏰ **Tạo Nhắc Hẹn Tự Động (Dành riêng cho Quản trị viên):**
 - Quản trị viên chỉ cần nói câu bình thường:
@@ -164,6 +166,51 @@ async function handleMessage(eventData) {
 
   // Xóa tên bot nếu được mention trong group (ví dụ: "@Bot HTD Media", "@Bot", "@HTD Media")
   rawText = rawText.replace(/@?(?:Bot\s*HTD\s*Media|Bot|HTD\s*Media)\b/gi, "").trim();
+
+  // 0.5 Lệnh xem thông tin tài khoản ngân hàng & gửi mã QR chuyển khoản (/stk)
+  const isStkCmd = (
+    rawText === '/stk' ||
+    rawText.startsWith('/stk ') ||
+    rawText.toLowerCase() === 'stk' ||
+    rawText.toLowerCase() === 'xin stk' ||
+    rawText.toLowerCase() === 'cho xin stk' ||
+    rawText.toLowerCase() === 'số tài khoản' ||
+    rawText.toLowerCase() === 'so tai khoan' ||
+    /(?:^|\s)\/stk(?:\s|$)/i.test(rawText)
+  );
+
+  if (isStkCmd) {
+    const photoUrl = 'https://zalo-bot-1.vercel.app/stk.jpg';
+    const fallbackPhotoUrl = 'https://raw.githubusercontent.com/hnihTyoB/zalo-bot-1/main/public/stk.jpg';
+    const caption = [
+      '💳 **THÔNG TIN TÀI KHOẢN NGÂN HÀNG (STK)**',
+      '',
+      '🏦 **Ngân hàng:** Sacombank (Napas 247)',
+      '🔢 **Số tài khoản:** `070120022431`',
+      '👤 **Chủ tài khoản:** NGUYEN CHI THINH',
+      '📝 **Nội dung:** CHUYEN TIEN NHANH QUA QR',
+      '',
+      '_💡 Quét mã QR trên ảnh để chuyển khoản nhanh chóng và chính xác!_'
+    ].join('\n');
+
+    await sendChatAction(chatId, 'upload_photo');
+
+    let zaloRes = null;
+    try {
+      zaloRes = await sendPhoto(chatId, photoUrl, caption, 'markdown');
+      if (!zaloRes?.ok) {
+        zaloRes = await sendPhoto(chatId, fallbackPhotoUrl, caption, 'markdown');
+      }
+    } catch (photoErr) {
+      console.warn('⚠️ Lỗi gửi ảnh STK qua sendPhoto:', photoErr.message);
+    }
+
+    if (!zaloRes || !zaloRes.ok) {
+      await sendMessage(chatId, caption, 'markdown');
+    }
+
+    return;
+  }
 
   // 1. Lệnh tóm tắt thảo luận nhóm (/summary)
   if (rawText.startsWith("/summary") || rawText.toLowerCase().includes("tóm tắt")) {
