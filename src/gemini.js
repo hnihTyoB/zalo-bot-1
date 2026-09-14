@@ -448,9 +448,95 @@ function looksLikeReminder(text) {
 }
 
 /**
- * Trích xuất nhắc hẹn nhanh qua Regex (0ms latency cho các câu phổ biến: sau X phút/giờ)
+ * Trích xuất nhắc hẹn lặp lại hàng ngày siêu tốc qua Regex (0ms latency)
+ */
+function tryQuickDailyReminder(text) {
+  const t = text.trim();
+
+  // Kiểm tra có từ khóa lặp lại hàng ngày không
+  const hasDailyKeyword = /(?:hàng ngày|hang ngay|mỗi ngày|moi ngay|ngày nào cũng|ngay nao cung|hằng ngày)/i.test(t);
+  if (!hasDailyKeyword) return null;
+
+  // Tìm mốc giờ trong câu (ví dụ: "8h", "8h30", "8:00", "8 giờ", "8 giờ 30", "8h sáng", "8h tối", "17h30")
+  const timeRegex = /(?:lúc\s*)?(\d{1,2})(?::(\d{2})|h(?:(\d{2}))?|\s*giờ(?:\s*(\d{1,2}))?)(?:\s*(sáng|chiều|tối|trưa|am|pm))?/i;
+  const timeMatch = t.match(timeRegex);
+  if (!timeMatch) return null;
+
+  let hour = parseInt(timeMatch[1], 10);
+  let minute = parseInt(timeMatch[2] || timeMatch[3] || timeMatch[4] || '0', 10);
+  const period = (timeMatch[5] || '').toLowerCase();
+
+  if (period === 'chiều' || period === 'tối' || period === 'pm') {
+    if (hour < 12) hour += 12;
+  } else if (period === 'sáng' || period === 'am') {
+    if (hour === 12) hour = 0;
+  } else if (period === 'trưa') {
+    if (hour < 11) hour += 12;
+  }
+
+  if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
+
+  // Lấy nội dung công việc bằng cách lược bỏ phần lệnh, thời gian, và từ khóa lặp lại
+  let content = t
+    .replace(/(?:tạo|đặt|lên)\s*(?:lịch\s*)?(?:nhắc(?:\s+nhở|\s+hẹn)?|hẹn(?:\s+giờ)?)?/gi, '')
+    .replace(/(?:hàng ngày|hang ngay|mỗi ngày|moi ngay|ngày nào cũng|ngay nao cung|hằng ngày)/gi, '')
+    .replace(timeRegex, '')
+    .replace(/(?:nhắc(?:\s+nhở|\s+hẹn)?|hẹn(?:\s+giờ)?)\s*(?:cho\s+)?(?:tôi|em|mình|nhóm|bạn|mọi người)?/gi, '')
+    .replace(/^(?:\s*(?:về|để|lúc|vào lúc|là|:|-)\s*)+/i, '')
+    .trim();
+
+  content = content.replace(/^(?:nhé|nha|ạ|đi|giùm|hộ|giúp tôi|giúp em|giúp mình)\s+/i, '').trim();
+  content = content.replace(/\s+(?:nhé|nha|ạ|nhé bot|nha bot)$/i, '').trim();
+  if (!content) content = 'Công việc hàng ngày';
+
+  // Tính toán thời điểm kế tiếp theo giờ VN (GMT+7)
+  const now = new Date();
+  const vnParts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: 'numeric',
+    hour12: false
+  }).formatToParts(now);
+
+  const getPart = type => parseInt(vnParts.find(p => p.type === type).value, 10);
+  const curYear = getPart('year');
+  const curMonth = getPart('month') - 1;
+  const curDay = getPart('day');
+  const curHour = getPart('hour');
+  const curMin = getPart('minute');
+
+  let targetDay = curDay;
+  if (hour < curHour || (hour === curHour && minute <= curMin)) {
+    targetDay += 1;
+  }
+
+  const remindAt = Date.UTC(curYear, curMonth, targetDay, hour - 7, minute, 0);
+  const hourStr = String(hour).padStart(2, '0');
+  const minStr = String(minute).padStart(2, '0');
+  const timeFormatted = `${hourStr}:${minStr}`;
+
+  return {
+    isReminder: true,
+    content,
+    remindAt,
+    repeat: 'daily',
+    targetTime: `${hourStr}:${minStr}`,
+    timeFormatted: `${timeFormatted} mỗi ngày`,
+    confirmationMessage: `⏰ **Đã ghi nhận lịch nhắc lặp lại hàng ngày thành công!**\n\n📌 **Nội dung:** ${content}\n🕒 **Thời gian nhắc:** ${timeFormatted} mỗi ngày\n🔁 **Chu kỳ:** Hàng ngày (lặp lại tự động mỗi ngày)\n\n_💡 Để xem danh sách gõ /reminders hoặc hủy lịch gõ /xoanhac._`
+  };
+}
+
+/**
+ * Trích xuất nhắc hẹn nhanh qua Regex (0ms latency cho các câu phổ biến: sau X phút/giờ hoặc hàng ngày)
  */
 function tryQuickRegexReminder(text) {
+  // 1. Kiểm tra nhắc hẹn lặp lại hàng ngày trước
+  const daily = tryQuickDailyReminder(text);
+  if (daily) return daily;
+
   const t = text.trim();
 
   // Mẫu 1: [tạo/đặt/lên lịch] [nhắc/hẹn] [tôi/em/mình/nhóm/bạn] [sau] X phút/giờ/tiếng [nữa] [nội dung]
@@ -467,7 +553,7 @@ function tryQuickRegexReminder(text) {
     const unit = match[2].toLowerCase();
     let content = match[3] ? match[3].trim() : '';
     // Lược bỏ các từ thừa ở đầu nội dung như "nhé", "nha", "ạ", "đi", "giúp", "hộ", "giùm"
-    content = content.replace(/^(nhé|nha|ạ|đi|giùm|hộ|giúp tôi|giúp em|giúp mình)\s*/i, '').trim();
+    content = content.replace(/^(?:nhé|nha|ạ|đi|giùm|hộ|giúp tôi|giúp em|giúp mình)\s+/i, '').trim();
     if (!content) content = 'Công việc đã lên lịch';
 
     let ms = 0;
@@ -486,6 +572,7 @@ function tryQuickRegexReminder(text) {
         isReminder: true,
         content,
         remindAt,
+        repeat: 'none',
         timeFormatted: `${timeStr} (sau ${num} ${unit})`,
         confirmationMessage: `⏰ **Đã ghi nhận nhắc hẹn thành công!**\n\n📌 **Nội dung:** ${content}\n🕒 **Thời gian nhắc:** ${timeStr} (sau ${num} ${unit})\n\n_Bot HTD Media sẽ chủ động nhắn tin Zalo cho bạn khi đến giờ!_`
       };
@@ -497,7 +584,7 @@ function tryQuickRegexReminder(text) {
 /**
  * Phân tích yêu cầu nhắc hẹn bằng Gemini AI (kết hợp Regex siêu tốc)
  * @param {string} userMessage
- * @returns {Promise<{ isReminder: boolean, content?: string, remindAt?: number, timeFormatted?: string, confirmationMessage?: string }>}
+ * @returns {Promise<{ isReminder: boolean, content?: string, remindAt?: number, repeat?: string, targetTime?: string, timeFormatted?: string, confirmationMessage?: string }>}
  */
 async function parseReminderIntent(userMessage) {
   if (!looksLikeReminder(userMessage)) {
@@ -518,8 +605,12 @@ Người dùng gửi tin nhắn: "${userMessage}"
 
 Hãy phân tích xem người dùng có muốn đặt lịch hẹn, tạo lịch nhắc, nhắc nhở hoặc báo thức cho một thời điểm cụ thể trong tương lai không.
 Nếu CÓ:
-- Xác định thời điểm cần nhắc (phải ở tương lai so với thời điểm hiện tại).
-- Tính toán chính xác targetTimestamp (mili-giây tính từ Unix epoch).
+- Xác định tính chất lặp lại của lịch:
+  + "repeat": "daily" (nếu có các từ như "hàng ngày", "mỗi ngày", "ngày nào cũng", "daily")
+  + "repeat": "weekly" (nếu có các từ như "hàng tuần", "mỗi tuần", "thứ X hàng tuần")
+  + "repeat": "none" (nếu là lịch 1 lần duy nhất)
+- Xác định thời điểm cần nhắc tiếp theo (phải ở tương lai so với thời điểm hiện tại).
+- Tính toán chính xác targetTimestamp (mili-giây tính từ Unix epoch cho lần nhắc kế tiếp).
 - Trích xuất nội dung công việc cần nhắc (ngắn gọn, súc tích).
 - Tạo câu xác nhận thân thiện.
 Nếu KHÔNG hoặc câu nói không có mốc thời gian cụ thể trong tương lai, trả về isReminder: false.
@@ -529,8 +620,9 @@ CHỈ trả về một JSON object duy nhất:
   "isReminder": true,
   "content": "nội dung công việc cần nhắc",
   "targetTimestamp": 1789195000000,
+  "repeat": "daily",
   "formattedTime": "HH:mm ngày DD/MM/YYYY",
-  "confirmationMessage": "⏰ **Đã đặt nhắc hẹn:** '...' lúc HH:mm ngày DD/MM/YYYY!"
+  "confirmationMessage": "⏰ **Đã đặt nhắc hẹn:** '...' lúc HH:mm!"
 }`;
 
   const payload = {
@@ -546,12 +638,21 @@ CHỈ trả về một JSON object duy nhất:
     const rawJson = await executeGeminiRequest(() => payload);
     const parsed = JSON.parse(rawJson);
     if (parsed && parsed.isReminder && parsed.targetTimestamp && Number(parsed.targetTimestamp) > Date.now()) {
+      const repeat = (parsed.repeat === 'daily' || parsed.repeat === 'weekly') ? parsed.repeat : 'none';
+      let confirmationMessage = parsed.confirmationMessage;
+      if (repeat === 'daily') {
+        confirmationMessage = `⏰ **Đã ghi nhận lịch nhắc lặp lại hàng ngày thành công!**\n\n📌 **Nội dung:** ${parsed.content}\n🕒 **Thời gian nhắc:** ${parsed.formattedTime || 'Hàng ngày'}\n🔁 **Chu kỳ:** Hàng ngày (lặp lại tự động mỗi ngày)\n\n_💡 Để xem danh sách gõ /reminders hoặc hủy lịch gõ /xoanhac._`;
+      } else if (repeat === 'weekly') {
+        confirmationMessage = `⏰ **Đã ghi nhận lịch nhắc lặp lại hàng tuần thành công!**\n\n📌 **Nội dung:** ${parsed.content}\n🕒 **Thời gian nhắc:** ${parsed.formattedTime || 'Hàng tuần'}\n🔁 **Chu kỳ:** Hàng tuần\n\n_💡 Để xem danh sách gõ /reminders hoặc hủy lịch gõ /xoanhac._`;
+      }
+
       return {
         isReminder: true,
         content: parsed.content || 'Công việc đã lên lịch',
         remindAt: Number(parsed.targetTimestamp),
+        repeat,
         timeFormatted: parsed.formattedTime || 'Thời gian đã hẹn',
-        confirmationMessage: parsed.confirmationMessage || `⏰ **Đã đặt nhắc hẹn:** "${parsed.content}" lúc ${parsed.formattedTime}!`
+        confirmationMessage: confirmationMessage || `⏰ **Đã đặt nhắc hẹn:** "${parsed.content}" lúc ${parsed.formattedTime}!`
       };
     }
   } catch (err) {

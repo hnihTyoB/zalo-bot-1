@@ -209,7 +209,7 @@ async function saveAllReminders(reminders) {
 
 /**
  * Thêm một nhắc hẹn mới
- * @param {{ chatId: string, senderId: string, senderName: string, chatType: string, content: string, remindAt: number }} reminderData
+ * @param {{ chatId: string, senderId: string, senderName: string, chatType: string, content: string, remindAt: number, repeat?: string, targetTime?: string }} reminderData
  * @returns {Promise<object>}
  */
 async function addReminder(reminderData) {
@@ -222,6 +222,8 @@ async function addReminder(reminderData) {
     chatType: reminderData.chatType || 'PRIVATE',
     content: reminderData.content,
     remindAt: Number(reminderData.remindAt),
+    repeat: reminderData.repeat || 'none', // 'daily' | 'weekly' | 'none'
+    targetTime: reminderData.targetTime || null,
     createdAt: Date.now()
   };
 
@@ -241,13 +243,50 @@ async function getDueReminders() {
 }
 
 /**
- * Đánh dấu nhắc hẹn đã gửi xong (xóa khỏi danh sách chờ)
+ * Đánh dấu nhắc hẹn đã gửi xong
+ * - Nếu là nhắc hẹn lặp lại (daily / weekly): Tự động tính toán mốc tiếp theo và dời lịch sang chu kỳ mới
+ * - Nếu là nhắc hẹn 1 lần: Xóa khỏi danh sách chờ
  * @param {string} reminderId
  */
 async function markReminderSent(reminderId) {
   const reminders = await getAllReminders();
-  const remaining = reminders.filter(r => r.id !== reminderId);
-  await saveAllReminders(remaining);
+  const updated = [];
+
+  for (const r of reminders) {
+    if (r.id !== reminderId) {
+      updated.push(r);
+      continue;
+    }
+
+    // Xử lý lịch lặp lại
+    if (r.repeat === 'daily') {
+      const nextDate = new Date(Number(r.remindAt));
+      nextDate.setDate(nextDate.getDate() + 1);
+      // Đảm bảo mốc thời gian tiếp theo nằm ở tương lai so với hiện tại
+      while (nextDate.getTime() <= Date.now()) {
+        nextDate.setDate(nextDate.getDate() + 1);
+      }
+      r.remindAt = nextDate.getTime();
+      r.lastSentAt = Date.now();
+      updated.push(r);
+      console.log(`🔁 [Reminder Recurring] Đã dời lịch lặp lại hàng ngày "${r.content}" sang: ${nextDate.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}`);
+    } else if (r.repeat === 'weekly') {
+      const nextDate = new Date(Number(r.remindAt));
+      nextDate.setDate(nextDate.getDate() + 7);
+      while (nextDate.getTime() <= Date.now()) {
+        nextDate.setDate(nextDate.getDate() + 7);
+      }
+      r.remindAt = nextDate.getTime();
+      r.lastSentAt = Date.now();
+      updated.push(r);
+      console.log(`🔁 [Reminder Recurring] Đã dời lịch lặp lại hàng tuần "${r.content}" sang: ${nextDate.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}`);
+    } else {
+      // Nhắc hẹn 1 lần -> không push vào updated (tương đương xóa)
+      console.log(`🗑️ [Reminder Once] Đã hoàn thành và xóa lịch nhắc 1 lần "${r.content}"`);
+    }
+  }
+
+  await saveAllReminders(updated);
 }
 
 /**
@@ -399,6 +438,7 @@ module.exports = {
   clearGroupMessages,
   addReminder,
   getDueReminders,
+  getAllReminders,
   markReminderSent,
   getChatReminders,
   deleteReminder,

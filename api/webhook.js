@@ -249,7 +249,8 @@ module.exports = async (req, res) => {
         day: '2-digit',
         month: '2-digit'
       });
-      return `${idx + 1}. ⏰ **${timeStr}**: ${r.content} _(Bởi: ${r.senderName})_`;
+      const repeatBadge = r.repeat === 'daily' ? ' 🔁 _[Hàng ngày]_' : (r.repeat === 'weekly' ? ' 🔁 _[Hàng tuần]_' : '');
+      return `${idx + 1}. ⏰ **${timeStr}**${repeatBadge}: ${r.content} _(Bởi: ${r.senderName})_`;
     });
 
     const msgReply = [
@@ -353,7 +354,9 @@ module.exports = async (req, res) => {
       senderName,
       chatType,
       content: reminderCheck.content,
-      remindAt: reminderCheck.remindAt
+      remindAt: reminderCheck.remindAt,
+      repeat: reminderCheck.repeat || 'none',
+      targetTime: reminderCheck.targetTime || null
     });
 
     const timeVN = new Date(saved.remindAt).toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });

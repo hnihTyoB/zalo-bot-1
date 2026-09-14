@@ -31,16 +31,23 @@ async function checkAndSendDueReminders() {
 
       const isGroup = item.chatType === 'GROUP';
       const targetLabel = isGroup ? `@${item.senderName}` : item.senderName;
+      const isDaily = item.repeat === 'daily';
+      const isWeekly = item.repeat === 'weekly';
+
+      const repeatNotice = isDaily 
+        ? '🔁 **Chu kỳ:** Lặp lại hàng ngày _(Lần nhắc kế tiếp: ngày mai)_' 
+        : (isWeekly ? '🔁 **Chu kỳ:** Lặp lại hàng tuần _(Lần nhắc kế tiếp: tuần sau)_' : '');
 
       const alertMessage = [
-        '{big}{red}⏰ ĐÃ ĐẾN GIỜ HẸN!{/red}{/big}',
+        `{big}{red}⏰ ĐÃ ĐẾN GIỜ HẸN!${isDaily ? ' [HÀNG NGÀY]' : (isWeekly ? ' [HÀNG TUẦN]' : '')}{/red}{/big}`,
         '',
         `🔔 **Nhắc hẹn cho:** **${targetLabel}**`,
         `📌 **Nội dung:** ${item.content}`,
         `🕒 **Thời gian:** ${timeStr} ngày ${dateStr}`,
+        repeatNotice,
         '',
         '_Bot HTD Media chúc bạn một ngày làm việc hiệu quả!_'
-      ].join('\n');
+      ].filter(Boolean).join('\n');
 
       try {
         await sendMessage(item.chatId, alertMessage, 'markdown');
