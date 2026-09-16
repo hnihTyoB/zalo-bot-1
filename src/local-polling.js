@@ -95,6 +95,26 @@ async function handleMessage(eventData) {
     return;
   }
 
+  // KIỂM TRA QUYỀN TRUY CẬP CHO NHÓM CHAT (ALLOWED_GROUP_IDS):
+  if (chatType === "GROUP" && config.allowedGroupIds.length > 0) {
+    const isAllowed = config.allowedGroupIds.includes(String(chatId));
+    if (!isAllowed) {
+      const text = (msg.text || msg.caption || "").trim();
+      if (/^\/(?:id|myid|whois)(?:\s|$)/i.test(text)) {
+        await sendMessage(
+          chatId,
+          `⚠️ **Nhóm này chưa được cấp phép cho Bot hoạt động!**\n\n🔑 **Chat ID của nhóm:** \`${chatId}\`\n💬 **Loại cuộc trò chuyện:** Group\n\n_💡 Hãy copy Chat ID này và thêm vào biến \`ALLOWED_GROUP_IDS\` trong file \`.env\` để kích hoạt Bot trong nhóm này._`,
+          "markdown",
+        );
+      } else {
+        console.log(
+          `🚫 [GROUP CHƯA CẤP PHÉP] Bỏ qua tin nhắn từ nhóm "${chatId}" (không nằm trong ALLOWED_GROUP_IDS).`,
+        );
+      }
+      return;
+    }
+  }
+
   // ==========================================
   // TRƯỜNG HỢP 1: XỬ LÝ HÌNH ẢNH (MULTIMODAL)
   // ==========================================
@@ -557,12 +577,21 @@ async function handleMessage(eventData) {
       return;
     }
 
+    const groupStatusLine =
+      chatType === "GROUP"
+        ? config.allowedGroupIds.length === 0 ||
+          config.allowedGroupIds.includes(String(chatId))
+          ? "🛡️ **Trạng thái nhóm:** ✅ Đã cấp phép hoạt động"
+          : "🛡️ **Trạng thái nhóm:** ⚠️ Chưa nằm trong ALLOWED_GROUP_IDS"
+        : null;
+
     const reply = [
       "{big}{green}🆔 THÔNG TIN TÀI KHOẢN CỦA BẠN{/green}{/big}",
       "",
       `👤 **Họ tên:** ${senderName}`,
       `🔑 **Zalo User ID:** \`${senderId}\``,
       `💬 **Chat ID:** \`${chatId}\` (${chatType})`,
+      ...(groupStatusLine ? [groupStatusLine] : []),
       isAdmin
         ? "⭐ **Quyền hạn:** Quản trị viên (Admin)"
         : "👥 **Quyền hạn:** Thành viên",
@@ -723,6 +752,16 @@ async function startPolling() {
     setInterval(() => {
       checkAndSendDueReminders().catch(() => {});
     }, 15000);
+
+    if (config.allowedGroupIds.length > 0) {
+      console.log(
+        `🛡️ Giới hạn nhóm: Chỉ hoạt động trong ${config.allowedGroupIds.length} nhóm được cấp phép (${config.allowedGroupIds.join(", ")})`,
+      );
+    } else {
+      console.log(
+        "ℹ️ Giới hạn nhóm: Chưa cấu hình ALLOWED_GROUP_IDS (Bot phản hồi ở mọi nhóm)",
+      );
+    }
 
     console.log(
       "🟢 Bot đã sẵn sàng nhận tin nhắn, hình ảnh & nhắc hẹn! Hãy nhắn tin cho bot trên Zalo.",

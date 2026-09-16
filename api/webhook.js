@@ -53,6 +53,7 @@ module.exports = async (req, res) => {
         totalGeminiKeys: config.geminiApiKeys?.length || 0,
         geminiModel: config.geminiModel,
         hasWebhookSecret: Boolean(config.webhookSecretToken),
+        allowedGroupIdsCount: config.allowedGroupIds?.length || 0,
         hasUpstashRedis: Boolean(
           config.upstashRedisRestUrl && config.upstashRedisRestToken,
         ),
@@ -134,6 +135,29 @@ module.exports = async (req, res) => {
       "⚠️ Xin lỗi, Bot HTD Media hiện chỉ hoạt động trong các nhóm chat hoặc dành riêng cho Quản trị viên. Bạn vui lòng mời Bot vào nhóm để sử dụng nhé!",
     );
     return res.status(200).json({ ok: true, blocked: true });
+  }
+
+  // KIỂM TRA QUYỀN TRUY CẬP CHO NHÓM CHAT (ALLOWED_GROUP_IDS):
+  if (chatType === "GROUP" && config.allowedGroupIds.length > 0) {
+    const isAllowed = config.allowedGroupIds.includes(String(chatId));
+    if (!isAllowed) {
+      const text = (msg.text || msg.caption || "").trim();
+      if (/^\/(?:id|myid|whois)(?:\s|$)/i.test(text)) {
+        const zaloRes = await sendMessage(
+          chatId,
+          `⚠️ **Nhóm này chưa được cấp phép cho Bot hoạt động!**\n\n🔑 **Chat ID của nhóm:** \`${chatId}\`\n💬 **Loại cuộc trò chuyện:** Group\n\n_💡 Hãy copy Chat ID này và thêm vào biến \`ALLOWED_GROUP_IDS\` trong file \`.env\` để kích hoạt Bot trong nhóm này._`,
+          "markdown",
+        );
+        return res
+          .status(200)
+          .json({ ok: true, blocked_group: true, zalo: zaloRes });
+      } else {
+        console.log(
+          `🚫 [GROUP CHƯA CẤP PHÉP] Bỏ qua tin nhắn từ nhóm "${chatId}" (không nằm trong ALLOWED_GROUP_IDS).`,
+        );
+        return res.status(200).json({ ok: true, blocked_group: true });
+      }
+    }
   }
 
   // ==========================================
@@ -592,12 +616,21 @@ module.exports = async (req, res) => {
       return res.status(200).json({ ok: true, zalo: zaloRes });
     }
 
+    const groupStatusLine =
+      chatType === "GROUP"
+        ? config.allowedGroupIds.length === 0 ||
+          config.allowedGroupIds.includes(String(chatId))
+          ? "🛡️ **Trạng thái nhóm:** ✅ Đã cấp phép hoạt động"
+          : "🛡️ **Trạng thái nhóm:** ⚠️ Chưa nằm trong ALLOWED_GROUP_IDS"
+        : null;
+
     const reply = [
       "{big}{green}🆔 THÔNG TIN TÀI KHOẢN CỦA BẠN{/green}{/big}",
       "",
       `👤 **Họ tên:** ${senderName}`,
       `🔑 **Zalo User ID:** \`${senderId}\``,
       `💬 **Chat ID:** \`${chatId}\` (${chatType})`,
+      ...(groupStatusLine ? [groupStatusLine] : []),
       isAdmin
         ? "⭐ **Quyền hạn:** Quản trị viên (Admin)"
         : "👥 **Quyền hạn:** Thành viên",

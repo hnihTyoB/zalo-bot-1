@@ -2,6 +2,7 @@ require('dotenv').config();
 
 const adminIdsRaw = process.env.ADMIN_USER_IDS || process.env.ADMIN_USER_ID || '45d7169545c0ac9ef5d1';
 const blockedIdsRaw = process.env.BLOCKED_USER_IDS || '';
+const allowedGroupIdsRaw = process.env.ALLOWED_GROUP_IDS || process.env.ALLOWED_GROUP_ID || '';
 
 // Lấy danh sách API Keys (hỗ trợ cả GEMINI_API_KEYS dạng chuỗi phân tách dấu phẩy và GEMINI_API_KEY đơn lẻ)
 const rawKeys = process.env.GEMINI_API_KEYS || process.env.GEMINI_API_KEY || '';
@@ -23,6 +24,7 @@ const config = {
   zaloApiBaseUrl: 'https://bot-api.zaloplatforms.com',
   adminUserIds: adminIdsRaw.split(',').map(id => id.trim()).filter(Boolean),
   blockedUserIds: blockedIdsRaw.split(',').map(id => id.trim()).filter(Boolean),
+  allowedGroupIds: allowedGroupIdsRaw.split(',').map(id => id.trim()).filter(Boolean),
   upstashRedisRestUrl: process.env.UPSTASH_REDIS_REST_URL || '',
   upstashRedisRestToken: process.env.UPSTASH_REDIS_REST_TOKEN || '',
   enableGoogleSearch: process.env.ENABLE_GOOGLE_SEARCH !== 'false'
