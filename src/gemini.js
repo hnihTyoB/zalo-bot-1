@@ -45,8 +45,9 @@ QUY TẮC TRẢ LỜI THÔNG THƯỜNG:
 
 /**
  * Tạo System Instruction động kèm mốc thời gian thực hiện tại của hệ thống (GMT+7)
+ * và nạp dữ liệu tìm kiếm Internet trực tuyến (nếu có)
  */
-function getSystemInstruction() {
+function getSystemInstruction(webContext = '') {
   const now = new Date();
   const timeVN = now.toLocaleString('vi-VN', {
     timeZone: 'Asia/Ho_Chi_Minh',
@@ -58,11 +59,82 @@ function getSystemInstruction() {
     minute: '2-digit'
   });
 
-  return `${SYSTEM_INSTRUCTION}
+  let instruction = `${SYSTEM_INSTRUCTION}
 
 THÔNG TIN THỜI GIAN THỰC HIỆN TẠI CỦA HỆ THỐNG:
 - Thời điểm hiện tại: ${timeVN} (Giờ Việt Nam UTC+7).
 - Bạn luôn nhận thức rõ mốc thời gian hiện tại để trả lời chuẩn xác các câu hỏi về ngày tháng, năm, các sự kiện trong năm và tiến trình thực tế, tuyệt đối không trả lời nhầm lẫn về các năm cũ trong quá khứ.`;
+
+  if (webContext) {
+    instruction += `
+
+THÔNG TIN TÌM KIẾM TRỰC TUYẾN MỚI NHẤT TỪ INTERNET (LIVE WEB DATA):
+---
+- ${webContext}
+---
+Hãy đối chiếu và ưu tiên sử dụng thông tin cập nhật thời gian thực ở trên để phản hồi chính xác nhất sự việc đang diễn ra ở thời điểm hiện tại.`;
+  }
+
+  return instruction;
+}
+
+/**
+ * Kiểm tra xem tin nhắn có cần tìm kiếm thông tin thời gian thực trên web hay không
+ */
+function shouldSearchWeb(text) {
+  const t = (text || '').trim().toLowerCase();
+  if (t.length < 3) return false;
+  const ignorePatterns = [
+    /^(chào|alo|hello|hi|hey|ê|hế lô|hé lô)(?:\s+bot)?$/i,
+    /^(cảm ơn|cam on|thanks|thank you|tks)(?:\s+bot)?$/i,
+    /^(tạm biệt|bye|bai|goodbye)(?:\s+bot)?$/i,
+    /^(ok|oke|okie|được|rồi|uh|ừ|dạ|vâng)$/i
+  ];
+  if (ignorePatterns.some(p => p.test(t))) return false;
+  return true;
+}
+
+/**
+ * Tra cứu thông tin thời gian thực từ Internet qua DuckDuckGo (0 latency overhead, không cần API key)
+ */
+async function searchWebRealtime(query) {
+  if (!config.enableGoogleSearch) return '';
+
+  try {
+    let cleanQuery = query
+      .replace(/\bhvl\b/gi, 'hlv')
+      .replace(/\bmc\b/gi, 'manchester city')
+      .replace(/\bmu\b/gi, 'manchester united')
+      .trim();
+
+    const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(cleanQuery)}`;
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      },
+      signal: AbortSignal.timeout(3000)
+    });
+
+    if (!res.ok) return '';
+    const html = await res.text();
+    const snippets = [];
+    const regex = /<a class="result__snippet[^>]*>(.*?)<\/a>/gi;
+    let match;
+    while ((match = regex.exec(html)) !== null && snippets.length < 5) {
+      const clean = match[1]
+        .replace(/<[^>]+>/g, '')
+        .replace(/&quot;/g, '"')
+        .replace(/&#x27;/g, "'")
+        .replace(/&amp;/g, '&')
+        .trim();
+      if (clean && clean.length > 20) {
+        snippets.push(clean);
+      }
+    }
+    return snippets.join('\n- ');
+  } catch (err) {
+    return '';
+  }
 }
 
 /**
@@ -242,9 +314,17 @@ async function askGemini(chatId, userMessage) {
     });
   }
 
+  // Tra cứu thông tin thời gian thực từ Internet nếu câu hỏi cần cập nhật
+  let webContext = '';
+  if (config.enableGoogleSearch && shouldSearchWeb(userMessage)) {
+    try {
+      webContext = await searchWebRealtime(userMessage);
+    } catch (e) {}
+  }
+
   const basePayload = {
     systemInstruction: {
-      parts: [{ text: getSystemInstruction() }]
+      parts: [{ text: getSystemInstruction(webContext) }]
     },
     contents: cleanContents,
     safetySettings: SAFETY_SETTINGS,
