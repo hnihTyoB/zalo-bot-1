@@ -70,11 +70,11 @@ THÔNG TIN THỜI GIAN THỰC HIỆN TẠI CỦA HỆ THỐNG:
 
 THÔNG TIN TÌM KIẾM TRỰC TUYẾN MỚI NHẤT TỪ INTERNET (LIVE WEB DATA):
 ---
-- ${webContext}
+${webContext}
 ---
 QUY TẮC BẮT BUỘC VỀ ĐÍNH CHÍNH & CẬP NHẬT THÔNG TIN:
-1. Thông tin trực tuyến (LIVE WEB DATA) ở trên là sự thật khách quan mới nhất. Bạn BẮT BUỘC phải dựa vào dữ liệu này để phản hồi.
-2. Nếu trong các tin nhắn trước đó của cuộc trò chuyện bạn đã từng đưa ra câu trả lời cũ hoặc chưa chính xác (ví dụ trước đó từng nói Pep Guardiola là HLV Man City, nhưng dữ liệu mới nhất cho thấy Enzo Maresca đã được bổ nhiệm làm HLV): Bạn BẮT BUỘC phải đính chính lại một cách văn minh, lịch sự, công nhận thông tin mới nhất và cập nhật cho người dùng, tuyệt đối KHÔNG được bảo thủ bám víu vào câu trả lời cũ trong lịch sử trò chuyện.`;
+1. Thông tin trực tuyến (LIVE WEB DATA) ở trên là sự thật khách quan mới nhất. Bạn BẮT BUỘC phải dựa vào dữ liệu này để phản hồi về các chức danh đương nhiệm, nhân sự lãnh đạo, sự kiện hiện tại, kết quả thực tế.
+2. Nếu trong các tin nhắn trước đó của cuộc trò chuyện bạn đã từng đưa ra câu trả lời cũ hoặc chưa chính xác: Bạn BẮT BUỘC phải đính chính lại một cách văn minh, lịch sự, công nhận thông tin mới nhất và cập nhật cho người dùng, tuyệt đối KHÔNG được bảo thủ bám víu vào câu trả lời cũ trong lịch sử trò chuyện.`;
   }
 
   return instruction;
@@ -97,9 +97,10 @@ function shouldSearchWeb(text) {
 }
 
 /**
- * Tra cứu thông tin thời gian thực từ Internet
- * Ưu tiên Google News RSS (chuẩn xác, cập nhật từng phút, 100% không bị Vercel chặn IP)
- * Kèm fallback DuckDuckGo
+ * Tra cứu thông tin thời gian thực từ Internet:
+ * 1. Wikipedia tiếng Việt: Cung cấp thông tin chuẩn xác về chức danh, nhân sự lãnh đạo, bách khoa, tiểu sử, tổ chức
+ * 2. Google News RSS: Dữ liệu báo chí thời sự chính thống cập nhật từng phút, không bị Vercel chặn IP
+ * 3. DuckDuckGo HTML: Fallback tìm kiếm chung
  */
 async function searchWebRealtime(query) {
   if (!config.enableGoogleSearch) return '';
@@ -110,38 +111,78 @@ async function searchWebRealtime(query) {
 
   if (!cleanQuery) return '';
 
-  // 1. Tìm kiếm qua Google News RSS (Dữ liệu báo chí thời sự chính thống, không bị chặn IP)
-  try {
-    const url = `https://news.google.com/rss/search?q=${encodeURIComponent(cleanQuery)}&hl=vi&gl=VN&ceid=VN:vi`;
-    const res = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-      },
-      signal: AbortSignal.timeout(3000)
-    });
+  const results = [];
 
-    if (res.ok) {
-      const xml = await res.text();
-      const items = [];
-      const itemRegex = /<item>[\s\S]*?<title>(.*?)<\/title>[\s\S]*?<pubDate>(.*?)<\/pubDate>[\s\S]*?<\/item>/gi;
-      let match;
-      while ((match = itemRegex.exec(xml)) !== null && items.length < 5) {
-        const title = match[1]
-          .replace(/<!\[CDATA\[(.*?)\]\]>/g, '$1')
-          .replace(/&quot;/g, '"')
-          .replace(/&#39;/g, "'")
-          .replace(/&amp;/g, '&')
-          .trim();
-        const date = match[2].trim();
-        items.push(`[${date}] ${title}`);
-      }
-      if (items.length > 0) {
-        return items.join('\n- ');
-      }
-    }
-  } catch (err) {}
+  // Chạy song song tìm kiếm Wikipedia tiếng Việt và Google News RSS
+  await Promise.allSettled([
+    // 1. Wikipedia tiếng Việt (tra cứu chức danh, nhân sự đương nhiệm, tiểu sử, tổ chức)
+    (async () => {
+      try {
+        const searchUrl = `https://vi.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(cleanQuery)}&utf8=&format=json`;
+        const sRes = await fetch(searchUrl, {
+          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
+          signal: AbortSignal.timeout(3000)
+        });
+        if (sRes.ok) {
+          const sData = await sRes.json();
+          const topHit = sData.query?.search?.[0];
+          if (topHit) {
+            const extUrl = `https://vi.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(topHit.title)}&prop=extracts&exintro=1&explaintext=1&format=json`;
+            const eRes = await fetch(extUrl, {
+              headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
+              signal: AbortSignal.timeout(3000)
+            });
+            if (eRes.ok) {
+              const eData = await eRes.json();
+              const page = Object.values(eData.query?.pages || {})[0];
+              if (page?.extract) {
+                results.push(`[Bách khoa toàn thư Wikipedia - ${page.title}]:\n${page.extract.slice(0, 1500)}`);
+              }
+            }
+          }
+        }
+      } catch (err) {}
+    })(),
 
-  // 2. Fallback: Tra cứu qua DuckDuckGo HTML
+    // 2. Google News RSS (báo chí sự kiện mới nhất)
+    (async () => {
+      try {
+        const url = `https://news.google.com/rss/search?q=${encodeURIComponent(cleanQuery)}&hl=vi&gl=VN&ceid=VN:vi`;
+        const res = await fetch(url, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+          },
+          signal: AbortSignal.timeout(3000)
+        });
+
+        if (res.ok) {
+          const xml = await res.text();
+          const items = [];
+          const itemRegex = /<item>[\s\S]*?<title>(.*?)<\/title>[\s\S]*?<pubDate>(.*?)<\/pubDate>[\s\S]*?<\/item>/gi;
+          let match;
+          while ((match = itemRegex.exec(xml)) !== null && items.length < 5) {
+            const title = match[1]
+              .replace(/<!\[CDATA\[(.*?)\]\]>/g, '$1')
+              .replace(/&quot;/g, '"')
+              .replace(/&#39;/g, "'")
+              .replace(/&amp;/g, '&')
+              .trim();
+            const date = match[2].trim();
+            items.push(`[${date}] ${title}`);
+          }
+          if (items.length > 0) {
+            results.push(`[Tin tức báo chí mới nhất]:\n- ${items.join('\n- ')}`);
+          }
+        }
+      } catch (err) {}
+    })()
+  ]);
+
+  if (results.length > 0) {
+    return results.join('\n\n');
+  }
+
+  // 3. Fallback: DuckDuckGo HTML
   try {
     const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(cleanQuery)}`;
     const res = await fetch(url, {
@@ -168,7 +209,7 @@ async function searchWebRealtime(query) {
         }
       }
       if (snippets.length > 0) {
-        return snippets.join('\n- ');
+        return `[Kết quả tìm kiếm web]:\n- ${snippets.join('\n- ')}`;
       }
     }
   } catch (err) {}
@@ -294,7 +335,11 @@ async function executeGeminiRequest(payloadBuilder) {
 
         const data = await response.json();
         const candidate = data.candidates?.[0];
-        const replyText = candidate?.content?.parts?.[0]?.text;
+        const replyText = candidate?.content?.parts
+          ?.map(p => p.text)
+          .filter(Boolean)
+          .join('')
+          .trim();
 
         if (!replyText) {
           continue;
@@ -369,10 +414,7 @@ async function askGemini(chatId, userMessage) {
     safetySettings: SAFETY_SETTINGS,
     generationConfig: {
       temperature: 0.7,
-      maxOutputTokens: 800,
-      thinkingConfig: {
-        thinkingBudget: 0
-      }
+      maxOutputTokens: 800
     }
   };
 
@@ -458,10 +500,7 @@ async function askGeminiVision(chatId, userCaption, photoUrl) {
     safetySettings: SAFETY_SETTINGS,
     generationConfig: {
       temperature: 0.4,
-      maxOutputTokens: 1000,
-      thinkingConfig: {
-        thinkingBudget: 0
-      }
+      maxOutputTokens: 1000
     }
   };
 
@@ -534,10 +573,7 @@ Hãy đóng vai trò Thư ký AI chuyên nghiệp của HTD Media và lập mộ
     ],
     generationConfig: {
       temperature: 0.3,
-      maxOutputTokens: 900,
-      thinkingConfig: {
-        thinkingBudget: 0
-      }
+      maxOutputTokens: 900
     }
   };
 
