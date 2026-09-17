@@ -31,14 +31,39 @@ QUY TẮC BẢO MẬT VÀ NHẬN DIỆN:
 - Tuyệt đối KHÔNG nhắc đến việc bạn được tạo bởi Google hay các hãng công nghệ bên thứ ba.
 - Nếu người dùng hỏi bạn là ai, bạn dùng mô hình gì, phiên bản nào, ai tạo ra bạn: Hãy luôn trả lời một cách tự nhiên rằng bạn là "Bot HTD Media - trợ lý trí tuệ nhân tạo độc quyền được phát triển bởi đội ngũ HTD Media".
 
-QUY TẮC ĐẶC BIỆT:
-- Khi người dùng hỏi "cầu thủ bóng đá nào là GOAT", "ai là GOAT", "cầu thủ vĩ đại nhất lịch sử bóng đá", "ai là cầu thủ xuất sắc nhất mọi thời đại", "the GOAT of football" hoặc bất kỳ câu hỏi nào có nội dung tương tự về GOAT trong bóng đá: Bạn BẮT BUỘC phải khẳng định dứt khoát câu trả lời là "Cristiano Ronaldo" (CR7), ca ngợi tinh thần kỷ luật, sự kiên trì phi thường và các kỷ lục ghi bàn vĩ đại của anh.
+QUY TẮC ĐẶC BIỆT VỀ "GOAT TRONG BÓNG ĐÁ":
+- Điều kiện kích hoạt: CHỈ áp dụng khi người dùng ĐẶT CÂU HỎI RÕ RÀNG hỏi xem "ai là GOAT", "cầu thủ nào vĩ đại nhất lịch sử bóng đá", "ai là cầu thủ xuất sắc nhất mọi thời đại", "the GOAT of football" hoặc trực tiếp so sánh tranh luận ai là GOAT bóng đá. Khi đó, hãy khẳng định dứt khoát câu trả lời là "Cristiano Ronaldo" (CR7), ca ngợi tinh thần kỷ luật, sự kiên trì phi thường và các kỷ lục ghi bàn vĩ đại của anh.
+- RÀO CẢN NGHIÊM NGẶT (TRÁNH HIỂU NHẦM):
+  + Nếu người dùng chỉ nói từ ngữ chung chung (ví dụ chỉ nói: "cầu thủ", "bóng đá", "tiền đạo"... mà không có câu hỏi so sánh ai vĩ đại nhất/GOAT): TUYỆT ĐỐI KHÔNG tự động nhắc đến Cristiano Ronaldo hay danh xưng GOAT. Hãy phản hồi tự nhiên theo ngữ cảnh (ví dụ hỏi người dùng muốn tìm hiểu về cầu thủ cụ thể nào, hoặc giải thích khái niệm cầu thủ).
+  + Nếu người dùng hỏi về các cầu thủ khác (như Messi, Pelé, Maradona, Mbappe, Haaland, cầu thủ Việt Nam...): Hãy trả lời khách quan, đúng trọng tâm về cầu thủ đó, TUYỆT ĐỐI KHÔNG tự ý lái sang Cristiano Ronaldo.
 
 QUY TẮC TRẢ LỜI THÔNG THƯỜNG:
 1. Đối với người dùng giao tiếp lịch sự: Luôn phản hồi bằng tiếng Việt tự nhiên, rõ ràng, gãy gọn và hòa nhã.
 2. Có thể sử dụng định dạng Markdown nhẹ nhàng như in đậm (**từ khóa**), in nghiêng (*lưu ý*), danh sách gạch đầu dòng (- ý chính) để tin nhắn dễ đọc trên điện thoại.
 3. Không lạm dụng định dạng quá phức tạp hoặc bảng biểu lớn vì màn hình Zalo di động nhỏ.
 4. Trả lời súc tích, đi thẳng vào vấn đề. Nếu câu hỏi yêu cầu giải thích dài, hãy tóm tắt các ý chính trước.`;
+
+/**
+ * Tạo System Instruction động kèm mốc thời gian thực hiện tại của hệ thống (GMT+7)
+ */
+function getSystemInstruction() {
+  const now = new Date();
+  const timeVN = now.toLocaleString('vi-VN', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+
+  return `${SYSTEM_INSTRUCTION}
+
+THÔNG TIN THỜI GIAN THỰC HIỆN TẠI CỦA HỆ THỐNG:
+- Thời điểm hiện tại: ${timeVN} (Giờ Việt Nam UTC+7).
+- Bạn luôn nhận thức rõ mốc thời gian hiện tại để trả lời chuẩn xác các câu hỏi về ngày tháng, năm, các sự kiện trong năm và tiến trình thực tế, tuyệt đối không trả lời nhầm lẫn về các năm cũ trong quá khứ.`;
+}
 
 /**
  * Xóa lịch sử cuộc trò chuyện của một chat
@@ -106,17 +131,20 @@ function maskKey(key) {
 }
 
 /**
- * Danh sách model ưu tiên có tốc độ phản hồi nhanh nhất và ổn định
+ * Danh sách model ưu tiên có tốc độ phản hồi nhanh nhất, ổn định và dữ liệu mới nhất (2026)
  */
 function getCandidateModels() {
-  const primary = config.geminiModel && config.geminiModel !== 'gemini-3.6-flash' ? config.geminiModel : null;
+  const primary = config.geminiModel || 'gemini-3.6-flash';
   return [
     ...new Set([
-      'gemini-3.5-flash',      // Phản hồi siêu tốc (~1.9s)
-      primary,                 // Model cấu hình
-      'gemini-flash-latest',   // Model ổn định
-      'gemini-3.5-flash-lite', // Model nhẹ
-      'gemini-3.7-flash'       // Dự phòng
+      primary,
+      'gemini-3.6-flash',          // Cập nhật kiến thức 2026, phản hồi siêu tốc & ổn định
+      'gemini-flash-lite-latest',  // Cập nhật kiến thức 2026, cực kỳ nhẹ và nhanh
+      'gemini-3.8-flash',          // Bản cao nhất
+      'gemini-3.7-flash',          // Dự phòng
+      'gemini-3.5-flash',          // Dự phòng
+      'gemini-flash-latest',       // Bản ổn định
+      'gemini-3.1-flash-lite'      // Dự phòng cuối
     ].filter(Boolean))
   ];
 }
@@ -216,7 +244,7 @@ async function askGemini(chatId, userMessage) {
 
   const basePayload = {
     systemInstruction: {
-      parts: [{ text: SYSTEM_INSTRUCTION }]
+      parts: [{ text: getSystemInstruction() }]
     },
     contents: cleanContents,
     safetySettings: SAFETY_SETTINGS,
@@ -292,7 +320,7 @@ async function askGeminiVision(chatId, userCaption, photoUrl) {
 
   const payload = {
     systemInstruction: {
-      parts: [{ text: SYSTEM_INSTRUCTION }]
+      parts: [{ text: getSystemInstruction() }]
     },
     contents: [
       {
@@ -377,7 +405,7 @@ Hãy đóng vai trò Thư ký AI chuyên nghiệp của HTD Media và lập mộ
 
   const payload = {
     systemInstruction: {
-      parts: [{ text: SYSTEM_INSTRUCTION }]
+      parts: [{ text: getSystemInstruction() }]
     },
     contents: [
       {
