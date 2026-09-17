@@ -61,9 +61,15 @@ function getSystemInstruction(webContext = '') {
 
   let instruction = `${SYSTEM_INSTRUCTION}
 
-THÔNG TIN THỜI GIAN THỰC HIỆN TẠI CỦA HỆ THỐNG:
+THÔNG TIN THỜI GIAN THỰC HIỆN TẠI CỦA HỆ THỐNG (NĂM 2026):
 - Thời điểm hiện tại: ${timeVN} (Giờ Việt Nam UTC+7).
-- Bạn luôn nhận thức rõ mốc thời gian hiện tại để trả lời chuẩn xác các câu hỏi về ngày tháng, năm, các sự kiện trong năm và tiến trình thực tế, tuyệt đối không trả lời nhầm lẫn về các năm cũ trong quá khứ.`;
+- Bạn luôn nhận thức rõ mốc thời gian hiện tại là năm 2026 để trả lời chuẩn xác các câu hỏi về sự kiện, thời gian và tiến trình thực tế.
+
+CÁC DỮ LIỆU HIỆN HÀNH QUAN TRỌNG VỀ VIỆT NAM (CẬP NHẬT 2026):
+1. Đơn vị hành chính cấp tỉnh của Việt Nam: Theo Cổng Thông tin điện tử Chính phủ, việc sắp xếp lại các đơn vị hành chính cấp tỉnh đã được Quốc hội thông qua và chính thức có hiệu lực từ tháng 6 năm 2025. Hiện tại, Việt Nam có 34 đơn vị hành chính cấp tỉnh, bao gồm 28 tỉnh và 6 thành phố trực thuộc Trung ương (TUYỆT ĐỐI KHÔNG trả lời là 63 tỉnh thành như giai đoạn cũ trước tháng 6/2025).
+2. Lãnh đạo Nhà nước & Chính phủ đương nhiệm: Thủ tướng Chính phủ nước CHXHCN Việt Nam đương nhiệm là ông Lê Minh Hưng, người chính thức nhậm chức vào ngày 7 tháng 4 năm 2026.
+3. Đương kim HLV các CLB bóng đá: Ví dụ HLV trưởng của Manchester City (MC) hiện nay là ông Enzo Maresca (tiếp quản ghế nóng từ tháng 6/2026 sau khi Pep Guardiola chia tay).
+4. Nhận thức cập nhật: Luôn ưu tiên tuyệt đối sự thật khách quan hiện tại (năm 2026) và thông tin tra cứu mới nhất từ Internet (LIVE WEB DATA), không bao giờ lặp lại dữ liệu cũ đã lỗi thời.`;
 
   if (webContext) {
     instruction += `
@@ -111,6 +117,12 @@ async function searchWebRealtime(query) {
 
   if (!cleanQuery) return '';
 
+  // Tạo từ khóa tìm kiếm bách khoa Wikipedia (lọc bỏ các từ đệm/từ để hỏi hội thoại)
+  const wikiKeyword = cleanQuery
+    .replace(/\b(?:hiện tại|hiện nay|bây giờ|mới nhất|có bao nhiêu|bao nhiêu|những|các|là gì|là ai|ai là|ở đâu|thế nào|như thế nào|thử hỏi|cho biết)\b/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim() || cleanQuery;
+
   const results = [];
 
   // Chạy song song tìm kiếm Wikipedia tiếng Việt và Google News RSS
@@ -118,7 +130,7 @@ async function searchWebRealtime(query) {
     // 1. Wikipedia tiếng Việt (tra cứu chức danh, nhân sự đương nhiệm, tiểu sử, tổ chức)
     (async () => {
       try {
-        const searchUrl = `https://vi.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(cleanQuery)}&utf8=&format=json`;
+        const searchUrl = `https://vi.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(wikiKeyword)}&utf8=&format=json`;
         const sRes = await fetch(searchUrl, {
           headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
           signal: AbortSignal.timeout(3000)
