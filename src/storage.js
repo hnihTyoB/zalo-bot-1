@@ -9,7 +9,9 @@ const MAX_HISTORY_MESSAGES = 10;
 const MAX_GROUP_BUFFER = 50;
 const CONVERSATION_TTL_SECONDS = 86400; // 24 giờ
 const GROUP_BUFFER_TTL_SECONDS = 43200; // 12 giờ
+const LAST_IMAGE_TTL_SECONDS = 7200; // 2 giờ
 const REDIS_REMINDERS_KEY = 'zalo:reminders:list';
+const memoryLastImages = new Map();
 
 /**
  * Thực thi lệnh Upstash Redis qua REST API (Chuẩn Serverless không cần dependency)
@@ -429,6 +431,49 @@ async function isUserBlocked(userId) {
   return blockedList.some(u => (typeof u === 'string' ? u : u.id) === idStr);
 }
 
+/**
+ * Lưu URL ảnh gần nhất của cuộc trò chuyện (để hỗ trợ người dùng reply ảnh hoặc hỏi sau khi gửi ảnh)
+ * @param {string|number} chatId
+ * @param {string} photoUrl
+ * @param {object} meta Thông tin thêm (caption, senderName, time)
+ */
+async function setLastImageUrl(chatId, photoUrl, meta = {}) {
+  if (!chatId || !photoUrl) return;
+  const idStr = String(chatId);
+  const data = { photoUrl, ...meta, timestamp: Date.now() };
+
+  memoryLastImages.set(idStr, data);
+
+  if (config.upstashRedisRestUrl && config.upstashRedisRestToken) {
+    const key = `zalo:last_img:${idStr}`;
+    await callRedisCommand('SET', key, JSON.stringify(data), 'EX', LAST_IMAGE_TTL_SECONDS);
+  }
+}
+
+/**
+ * Lấy URL ảnh gần nhất của cuộc trò chuyện
+ * @param {string|number} chatId
+ * @returns {Promise<string|null>}
+ */
+async function getLastImageUrl(chatId) {
+  if (!chatId) return null;
+  const idStr = String(chatId);
+
+  if (config.upstashRedisRestUrl && config.upstashRedisRestToken) {
+    const key = `zalo:last_img:${idStr}`;
+    const raw = await callRedisCommand('GET', key);
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (parsed?.photoUrl) return parsed.photoUrl;
+      } catch (e) {}
+    }
+  }
+
+  const mem = memoryLastImages.get(idStr);
+  return mem?.photoUrl || null;
+}
+
 module.exports = {
   getConversationHistory,
   saveConversationHistory,
@@ -446,7 +491,9 @@ module.exports = {
   getBlockedUsers,
   addBlockedUser,
   removeBlockedUser,
-  isUserBlocked
+  isUserBlocked,
+  setLastImageUrl,
+  getLastImageUrl
 };
 
 

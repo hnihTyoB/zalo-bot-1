@@ -168,57 +168,89 @@ const formatStyles = {
 };
 
 /**
- * Trích xuất đường dẫn ảnh thông minh từ mọi cấu trúc dữ liệu của Zalo
+ * Trích xuất URL ảnh từ một đối tượng bất kỳ (msg, quote, attachment, payload...)
+ */
+function extractPhotoFromObject(obj) {
+  if (!obj || typeof obj !== 'object') return null;
+
+  // 1. Kiểm tra thuộc tính chuỗi URL trực tiếp
+  const directFields = ['photo', 'url', 'image', 'image_url', 'link', 'thumb', 'thumbnail', 'href', 'media_url', 'picture'];
+  for (const field of directFields) {
+    if (typeof obj[field] === 'string' && obj[field].startsWith('http')) {
+      return obj[field];
+    }
+  }
+
+  // 2. Kiểm tra thuộc tính object con
+  if (obj.photo && typeof obj.photo.url === 'string' && obj.photo.url.startsWith('http')) return obj.photo.url;
+  if (obj.image && typeof obj.image.url === 'string' && obj.image.url.startsWith('http')) return obj.image.url;
+  if (obj.payload && typeof obj.payload.url === 'string' && obj.payload.url.startsWith('http')) return obj.payload.url;
+  if (obj.attachment && typeof obj.attachment.url === 'string' && obj.attachment.url.startsWith('http')) return obj.attachment.url;
+  if (obj.attachment?.payload && typeof obj.attachment.payload.url === 'string' && obj.attachment.payload.url.startsWith('http')) return obj.attachment.payload.url;
+
+  // 3. Kiểm tra các mảng ảnh / attachments
+  const arrayFields = ['photo', 'photos', 'image', 'images', 'attachments'];
+  for (const field of arrayFields) {
+    if (Array.isArray(obj[field]) && obj[field].length > 0) {
+      for (const item of obj[field]) {
+        if (typeof item === 'string' && item.startsWith('http')) return item;
+        if (typeof item?.url === 'string' && item.url.startsWith('http')) return item.url;
+        if (typeof item?.payload?.url === 'string' && item.payload.url.startsWith('http')) return item.payload.url;
+        if (typeof item?.thumb === 'string' && item.thumb.startsWith('http')) return item.thumb;
+        if (typeof item?.thumbnail === 'string' && item.thumbnail.startsWith('http')) return item.thumbnail;
+      }
+    }
+  }
+
+  // 4. Kiểm tra trường hợp đặc biệt: Tin nhắn STK ngân hàng của Bot
+  const textContent = obj.text || obj.content || obj.caption || '';
+  if (typeof textContent === 'string' && /Sacombank|070120022431|NGUYEN CHI THINH/i.test(textContent)) {
+    return 'https://zalo-bot-1.vercel.app/stk.jpg';
+  }
+
+  // 5. Kiểm tra URL ảnh trong text
+  if (typeof textContent === 'string') {
+    const match = textContent.match(/https?:\/\/[^\s"'\\]+(?:\.(?:jpg|jpeg|png|webp)|zadn\.vn\/[^\s"'\\]+|zaloapp\.com\/[^\s"'\\]+)/i);
+    if (match) return match[0];
+  }
+
+  // 6. Kiểm tra object lồng nhau (message, quote, reply_to_message...)
+  const nestedFields = ['message', 'msg', 'quote', 'reply_to_message', 'reply_to', 'quoted_message', 'target'];
+  for (const nField of nestedFields) {
+    if (obj[nField] && typeof obj[nField] === 'object' && obj[nField] !== obj) {
+      const found = extractPhotoFromObject(obj[nField]);
+      if (found) return found;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Trích xuất đường dẫn ảnh thông minh từ mọi cấu trúc dữ liệu của Zalo (kể cả khi reply ảnh)
  */
 function findImageUrl(data, eventData, msg) {
   // 1. Kiểm tra trực tiếp trên msg
-  if (typeof msg?.photo === 'string' && msg.photo.startsWith('http')) return msg.photo;
-  if (typeof msg?.url === 'string' && msg.url.startsWith('http')) return msg.url;
-  if (typeof msg?.image === 'string' && msg.image.startsWith('http')) return msg.image;
-  if (typeof msg?.image_url === 'string' && msg.image_url.startsWith('http')) return msg.image_url;
-  if (typeof msg?.link === 'string' && msg.link.startsWith('http')) return msg.link;
+  const fromMsg = extractPhotoFromObject(msg);
+  if (fromMsg) return fromMsg;
 
-  // 2. Kiểm tra nếu là object
-  if (msg?.photo && typeof msg.photo.url === 'string') return msg.photo.url;
-  if (msg?.image && typeof msg.image.url === 'string') return msg.image.url;
-
-  // 3. Kiểm tra mảng ảnh
-  if (Array.isArray(msg?.photo) && msg.photo.length > 0) {
-    const p = msg.photo[0];
-    if (typeof p === 'string' && p.startsWith('http')) return p;
-    if (p?.url && typeof p.url === 'string') return p.url;
-  }
-  if (Array.isArray(msg?.images) && msg.images.length > 0) {
-    const p = msg.images[0];
-    if (typeof p === 'string' && p.startsWith('http')) return p;
-    if (p?.url && typeof p.url === 'string') return p.url;
-  }
-  if (Array.isArray(msg?.photos) && msg.photos.length > 0) {
-    const p = msg.photos[0];
-    if (typeof p === 'string' && p.startsWith('http')) return p;
-    if (p?.url && typeof p.url === 'string') return p.url;
+  // 2. Kiểm tra quoted / reply message
+  const quoted = msg?.reply_to_message || msg?.quote || msg?.reply_to || msg?.quoted_message
+              || eventData?.reply_to_message || eventData?.quote || eventData?.reply_to
+              || data?.reply_to_message || data?.quote;
+  if (quoted) {
+    const fromQuoted = extractPhotoFromObject(quoted);
+    if (fromQuoted) return fromQuoted;
   }
 
-  // 4. Attachments (Định dạng phổ biến trên Zalo Web / Messenger)
-  if (Array.isArray(msg?.attachments) && msg.attachments.length > 0) {
-    for (const att of msg.attachments) {
-      if (typeof att === 'string' && att.startsWith('http')) return att;
-      if (typeof att?.url === 'string') return att.url;
-      if (typeof att?.payload?.url === 'string') return att.payload.url;
-    }
-  }
-  if (msg?.attachment) {
-    if (typeof msg.attachment.url === 'string') return msg.attachment.url;
-    if (typeof msg.attachment.payload?.url === 'string') return msg.attachment.payload.url;
-  }
+  // 3. Kiểm tra eventData và root data
+  const fromEvent = extractPhotoFromObject(eventData);
+  if (fromEvent) return fromEvent;
 
-  // 5. Kiểm tra trên eventData và root data
-  if (typeof eventData?.photo === 'string') return eventData.photo;
-  if (typeof eventData?.url === 'string') return eventData.url;
-  if (typeof data?.photo === 'string') return data.photo;
-  if (typeof data?.url === 'string') return data.url;
+  const fromData = extractPhotoFromObject(data);
+  if (fromData) return fromData;
 
-  // 6. Quét đệ quy chuỗi JSON tìm bất kỳ URL ảnh nào (Zalo CDN: zadn.vn, zaloapp.com hoặc đuôi ảnh)
+  // 4. Quét đệ quy chuỗi JSON tìm bất kỳ URL ảnh nào (Zalo CDN: zadn.vn, zaloapp.com hoặc đuôi ảnh)
   try {
     const jsonStr = JSON.stringify(data || {});
     const urlMatch = jsonStr.match(/https?:\/\/[^"'\s\\]+(?:\.(?:jpg|jpeg|png|webp)|zadn\.vn\/[^\s"'\\]+|zaloapp\.com\/[^\s"'\\]+)/i);

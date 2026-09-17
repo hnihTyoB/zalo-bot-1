@@ -172,10 +172,43 @@ module.exports = async (req, res) => {
   // ==========================================
   // TRƯỜNG HỢP 1: XỬ LÝ HÌNH ẢNH (MULTIMODAL)
   // ==========================================
-  const photoUrl = findImageUrl(data, eventData, msg);
+  let photoUrl = findImageUrl(data, eventData, msg);
+
+  // Kiểm tra nếu là thao tác Trả lời (Reply / Quote) tin nhắn có ảnh hoặc người dùng hỏi phân tích ảnh
+  const quoted = msg?.reply_to_message || msg?.quote || msg?.reply_to || msg?.quoted_message
+              || eventData?.reply_to_message || eventData?.quote || eventData?.reply_to
+              || data?.reply_to_message || data?.quote;
+
+  const rawUserText = (msg?.text || msg?.caption || '').trim();
+  const isImageIntent = /^(?:hãy\s*)?(?:phân tích|đọc|dịch|xem|kiểm tra|quét|soi|nhận diện|trích xuất|ocr)(?:\s+(?:bức|tấm|hình|cái))?\s*(?:ảnh|hình|qr|bill|hóa đơn)(?:\s+này|\s+đó|\s+trên)?/i.test(rawUserText)
+    || /phân tích ảnh|đọc ảnh|dịch ảnh|quét qr|đọc qr|ảnh này là gì|hình này là gì|đây là ảnh gì|hình gì đây/i.test(rawUserText);
+
+  if (!photoUrl && (quoted || isImageIntent)) {
+    // 1. Kiểm tra ảnh trong tin nhắn được trích dẫn (quoted)
+    photoUrl = findImageUrl(quoted, quoted, quoted?.message || quoted);
+
+    // 2. Nếu trích dẫn tin nhắn STK ngân hàng của bot
+    if (!photoUrl && quoted) {
+      const qText = quoted.text || quoted.content || quoted.message?.text || '';
+      if (/Sacombank|070120022431|NGUYEN CHI THINH/i.test(qText)) {
+        photoUrl = "https://zalo-bot-1.vercel.app/stk.jpg";
+      }
+    }
+
+    // 3. Nếu vẫn chưa có và người dùng có ý định phân tích ảnh hoặc quote có dấu hiệu là ảnh ([Hình ảnh])
+    if (!photoUrl && (isImageIntent || quoted?.msg_type?.includes('photo') || quoted?.msg_type?.includes('image') || /\[Hình ảnh\]|\[Photo\]|\[Image\]/i.test(quoted?.text || ''))) {
+      photoUrl = await storage.getLastImageUrl(chatId);
+    }
+  }
+
   if (eventName === "message.image.received" || photoUrl) {
     let caption = (msg?.caption || msg?.text || msg?.description || "").trim();
     caption = caption.replace(/@?Bot HTD Media/gi, "").trim();
+
+    // Lưu ảnh gần nhất của chat để phục vụ các câu hỏi tiếp theo
+    if (photoUrl) {
+      await storage.setLastImageUrl(chatId, photoUrl, { senderName, senderId, caption });
+    }
 
     console.log(
       `🖼️ [Webhook][${chatType}] Nhận ảnh từ ${senderName} (${senderId}). URL: ${photoUrl ? photoUrl.slice(0, 50) : "null"} | Câu hỏi: "${caption || "(không có câu hỏi)"}"`,
@@ -276,6 +309,9 @@ module.exports = async (req, res) => {
       "🔢 070120022431",
       "👤 NGUYEN CHI THINH",
     ].join("\n");
+
+    // Lưu ảnh STK làm ảnh gần nhất của chat
+    await storage.setLastImageUrl(chatId, photoUrl, { senderName: 'Bot HTD Media', caption });
 
     await sendChatAction(chatId, "upload_photo");
 
