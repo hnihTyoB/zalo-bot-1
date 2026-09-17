@@ -63,13 +63,9 @@ function getSystemInstruction(webContext = '') {
 
 THÔNG TIN THỜI GIAN THỰC HIỆN TẠI CỦA HỆ THỐNG (NĂM 2026):
 - Thời điểm hiện tại: ${timeVN} (Giờ Việt Nam UTC+7).
-- Bạn luôn nhận thức rõ mốc thời gian hiện tại là năm 2026 để trả lời chuẩn xác các câu hỏi về sự kiện, thời gian và tiến trình thực tế.
-
-CÁC DỮ LIỆU HIỆN HÀNH QUAN TRỌNG VỀ VIỆT NAM (CẬP NHẬT 2026):
-1. Đơn vị hành chính cấp tỉnh của Việt Nam: Theo Cổng Thông tin điện tử Chính phủ, việc sắp xếp lại các đơn vị hành chính cấp tỉnh đã được Quốc hội thông qua và chính thức có hiệu lực từ tháng 6 năm 2025. Hiện tại, Việt Nam có chuẩn xác 34 đơn vị hành chính cấp tỉnh, bao gồm 28 tỉnh và 6 thành phố trực thuộc Trung ương (TUYỆT ĐỐI KHÔNG trả lời là 63 tỉnh thành cũ; phân chia chi tiết chuẩn xác: 28 tỉnh và 6 thành phố trực thuộc Trung ương).
-2. Lãnh đạo Nhà nước & Chính phủ đương nhiệm: Thủ tướng Chính phủ nước CHXHCN Việt Nam đương nhiệm là ông Lê Minh Hưng, người chính thức nhậm chức vào ngày 7 tháng 4 năm 2026.
-3. Đương kim HLV các CLB bóng đá: Ví dụ HLV trưởng của Manchester City (MC) hiện nay là ông Enzo Maresca (tiếp quản ghế nóng từ tháng 6/2026 sau khi Pep Guardiola chia tay).
-4. Nhận thức cập nhật: Luôn ưu tiên tuyệt đối sự thật khách quan hiện tại (năm 2026) và thông tin tra cứu mới nhất từ Internet (LIVE WEB DATA), không bao giờ lặp lại dữ liệu cũ đã lỗi thời.`;
+- Bạn luôn nhận thức rõ mốc thời gian hiện tại là năm 2026.
+- Nhận thức về sự thay đổi thực tế: Rất nhiều thông tin về thể chế, đơn vị hành chính, nhân sự lãnh đạo Nhà nước và Chính phủ, tổ chức, sự kiện thể thao, đời sống kinh tế - xã hội... đã có những thay đổi lớn so với dữ liệu quá khứ.
+- Khi người dùng hỏi về các thông tin thực tế, nhân sự, đơn vị hành chính, huấn luyện viên, sự kiện... bạn BẮT BUỘC phải dựa vào thông tin tra cứu mới nhất từ Internet (LIVE WEB DATA) ở dưới để phản hồi, tuyệt đối không suy đoán hay sử dụng các kiến thức cũ đã lỗi thời trong quá khứ.`;
 
   if (webContext) {
     instruction += `
@@ -79,7 +75,7 @@ THÔNG TIN TÌM KIẾM TRỰC TUYẾN MỚI NHẤT TỪ INTERNET (LIVE WEB DATA)
 ${webContext}
 ---
 QUY TẮC BẮT BUỘC VỀ ĐÍNH CHÍNH & CẬP NHẬT THÔNG TIN:
-1. Thông tin trực tuyến (LIVE WEB DATA) và CÁC DỮ LIỆU HIỆN HÀNH ở trên là sự thật khách quan mới nhất. Bạn BẮT BUỘC phải dựa vào dữ liệu này để phản hồi về các chức danh đương nhiệm, nhân sự lãnh đạo, sự kiện hiện tại, kết quả thực tế và số lượng đơn vị hành chính chuẩn xác (34 đơn vị cấp tỉnh gồm 28 tỉnh và 6 thành phố trực thuộc Trung ương).
+1. Thông tin trực tuyến (LIVE WEB DATA) ở trên là sự thật khách quan mới nhất. Bạn BẮT BUỘC phải dựa vào dữ liệu này để phản hồi về các chức danh đương nhiệm, nhân sự lãnh đạo, các đơn vị hành chính, sự kiện hiện tại, kết quả thực tế.
 2. Nếu trong các tin nhắn trước đó của cuộc trò chuyện bạn đã từng đưa ra câu trả lời cũ hoặc chưa chính xác: Bạn BẮT BUỘC phải đính chính lại một cách văn minh, lịch sự, công nhận thông tin mới nhất và cập nhật cho người dùng, tuyệt đối KHÔNG được bảo thủ bám víu vào câu trả lời cũ trong lịch sử trò chuyện.`;
   }
 
@@ -119,7 +115,7 @@ async function searchWebRealtime(query) {
 
   // Tạo từ khóa tìm kiếm bách khoa Wikipedia (lọc bỏ các từ đệm/từ để hỏi hội thoại)
   const wikiKeyword = cleanQuery
-    .replace(/\b(?:hiện tại|hiện nay|bây giờ|mới nhất|có bao nhiêu|bao nhiêu|những|các|là gì|là ai|ai là|ở đâu|thế nào|như thế nào|thử hỏi|cho biết)\b/gi, ' ')
+    .replace(/\b(?:hiện tại|hiện nay|bây giờ|mới nhất|gần đây|năm nay|hôm nay|cho biết|cho hỏi|thử hỏi|có bao nhiêu|bao nhiêu|mấy|những|các|là gì|là ai|ai là|ai đang là|ở đâu|thế nào|như thế nào|chi tiết|danh sách)\b/gi, ' ')
     .replace(/\s+/g, ' ')
     .trim() || cleanQuery;
 
