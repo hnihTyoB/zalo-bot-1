@@ -104,24 +104,15 @@ function shouldSearchWeb(text) {
 async function searchWebRealtime(query) {
   if (!config.enableGoogleSearch) return '';
 
-  let cleanQuery = query
-    .replace(/\bhvl\b/gi, 'hlv')
-    .replace(/\bmc\b/gi, 'manchester city')
-    .replace(/\bmu\b/gi, 'manchester united')
-    .replace(/\bchel\b/gi, 'chelsea')
-    .replace(/\bars\b/gi, 'arsenal')
-    .replace(/\breal\b/gi, 'real madrid')
-    .replace(/\bbarca\b/gi, 'barcelona')
+  const cleanQuery = (query || '')
+    .replace(/^(?:bot\s*(?:ơi|cho\s*hỏi|hỏi\s*tí|hỏi\s*chút|hỏi\s*nhé)?|cho\s*(?:mình|em|tôi)\s*hỏi|hỏi\s*tí|hỏi\s*chút|hỏi\s*bot)\s*:?/i, '')
     .trim();
 
-  // 1. Tìm kiếm qua Google News RSS (Không bao giờ bị Vercel chặn, dữ liệu báo chí chính thống cập nhật từng giờ)
-  try {
-    let newsQuery = cleanQuery;
-    if (/\bhlv|huấn luyện viên/i.test(newsQuery) && !/hiện tại|mới nhất/i.test(newsQuery)) {
-      newsQuery += ' hiện tại mới nhất';
-    }
+  if (!cleanQuery) return '';
 
-    const url = `https://news.google.com/rss/search?q=${encodeURIComponent(newsQuery)}&hl=vi&gl=VN&ceid=VN:vi`;
+  // 1. Tìm kiếm qua Google News RSS (Dữ liệu báo chí thời sự chính thống, không bị chặn IP)
+  try {
+    const url = `https://news.google.com/rss/search?q=${encodeURIComponent(cleanQuery)}&hl=vi&gl=VN&ceid=VN:vi`;
     const res = await fetch(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
