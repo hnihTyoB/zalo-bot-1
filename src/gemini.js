@@ -97,27 +97,61 @@ function shouldSearchWeb(text) {
 }
 
 /**
- * Tra cứu thông tin thời gian thực từ Internet qua DuckDuckGo (0 latency overhead, không cần API key)
+ * Tra cứu thông tin thời gian thực từ Internet
+ * Ưu tiên Google News RSS (chuẩn xác, cập nhật từng phút, 100% không bị Vercel chặn IP)
+ * Kèm fallback DuckDuckGo
  */
 async function searchWebRealtime(query) {
   if (!config.enableGoogleSearch) return '';
 
-  try {
-    let cleanQuery = query
-      .replace(/\bhvl\b/gi, 'hlv')
-      .replace(/\bmc\b/gi, 'manchester city')
-      .replace(/\bmu\b/gi, 'manchester united')
-      .replace(/\bchel\b/gi, 'chelsea')
-      .replace(/\bars\b/gi, 'arsenal')
-      .replace(/\breal\b/gi, 'real madrid')
-      .replace(/\bbarca\b/gi, 'barcelona')
-      .trim();
+  let cleanQuery = query
+    .replace(/\bhvl\b/gi, 'hlv')
+    .replace(/\bmc\b/gi, 'manchester city')
+    .replace(/\bmu\b/gi, 'manchester united')
+    .replace(/\bchel\b/gi, 'chelsea')
+    .replace(/\bars\b/gi, 'arsenal')
+    .replace(/\breal\b/gi, 'real madrid')
+    .replace(/\bbarca\b/gi, 'barcelona')
+    .trim();
 
-    // Nếu hỏi về HLV/huấn luyện viên, thêm từ khóa "hiện tại mới nhất" để ưu tiên kết quả cập nhật
-    if (/\bhlv|huấn luyện viên/i.test(cleanQuery) && !/hiện tại|mới nhất|mùa giải/i.test(cleanQuery)) {
-      cleanQuery += ' hiện tại mới nhất';
+  // 1. Tìm kiếm qua Google News RSS (Không bao giờ bị Vercel chặn, dữ liệu báo chí chính thống cập nhật từng giờ)
+  try {
+    let newsQuery = cleanQuery;
+    if (/\bhlv|huấn luyện viên/i.test(newsQuery) && !/hiện tại|mới nhất/i.test(newsQuery)) {
+      newsQuery += ' hiện tại mới nhất';
     }
 
+    const url = `https://news.google.com/rss/search?q=${encodeURIComponent(newsQuery)}&hl=vi&gl=VN&ceid=VN:vi`;
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      },
+      signal: AbortSignal.timeout(3000)
+    });
+
+    if (res.ok) {
+      const xml = await res.text();
+      const items = [];
+      const itemRegex = /<item>[\s\S]*?<title>(.*?)<\/title>[\s\S]*?<pubDate>(.*?)<\/pubDate>[\s\S]*?<\/item>/gi;
+      let match;
+      while ((match = itemRegex.exec(xml)) !== null && items.length < 5) {
+        const title = match[1]
+          .replace(/<!\[CDATA\[(.*?)\]\]>/g, '$1')
+          .replace(/&quot;/g, '"')
+          .replace(/&#39;/g, "'")
+          .replace(/&amp;/g, '&')
+          .trim();
+        const date = match[2].trim();
+        items.push(`[${date}] ${title}`);
+      }
+      if (items.length > 0) {
+        return items.join('\n- ');
+      }
+    }
+  } catch (err) {}
+
+  // 2. Fallback: Tra cứu qua DuckDuckGo HTML
+  try {
     const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(cleanQuery)}`;
     const res = await fetch(url, {
       headers: {
@@ -126,26 +160,29 @@ async function searchWebRealtime(query) {
       signal: AbortSignal.timeout(3000)
     });
 
-    if (!res.ok) return '';
-    const html = await res.text();
-    const snippets = [];
-    const regex = /<a class="result__snippet[^>]*>(.*?)<\/a>/gi;
-    let match;
-    while ((match = regex.exec(html)) !== null && snippets.length < 5) {
-      const clean = match[1]
-        .replace(/<[^>]+>/g, '')
-        .replace(/&quot;/g, '"')
-        .replace(/&#x27;/g, "'")
-        .replace(/&amp;/g, '&')
-        .trim();
-      if (clean && clean.length > 20) {
-        snippets.push(clean);
+    if (res.ok) {
+      const html = await res.text();
+      const snippets = [];
+      const regex = /<a class="result__snippet[^>]*>(.*?)<\/a>/gi;
+      let match;
+      while ((match = regex.exec(html)) !== null && snippets.length < 5) {
+        const clean = match[1]
+          .replace(/<[^>]+>/g, '')
+          .replace(/&quot;/g, '"')
+          .replace(/&#x27;/g, "'")
+          .replace(/&amp;/g, '&')
+          .trim();
+        if (clean && clean.length > 20) {
+          snippets.push(clean);
+        }
+      }
+      if (snippets.length > 0) {
+        return snippets.join('\n- ');
       }
     }
-    return snippets.join('\n- ');
-  } catch (err) {
-    return '';
-  }
+  } catch (err) {}
+
+  return '';
 }
 
 /**
@@ -786,5 +823,6 @@ module.exports = {
   askGeminiVision,
   summarizeGroupChat,
   parseReminderIntent,
-  clearHistory
+  clearHistory,
+  searchWebRealtime
 };

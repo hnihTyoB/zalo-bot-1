@@ -11,6 +11,7 @@ const {
   summarizeGroupChat,
   parseReminderIntent,
   clearHistory,
+  searchWebRealtime,
 } = require("../src/gemini");
 const storage = require("../src/storage");
 const { checkAndSendDueReminders } = require("../src/reminder-worker");
@@ -44,23 +45,17 @@ Tôi là trợ lý AI thông minh của HTD Media, luôn sẵn sàng hỗ trợ 
 module.exports = async (req, res) => {
   // 1. Health check qua GET để chẩn đoán nhanh môi trường Vercel
   if (req.method === "GET") {
-    let ddgStatus = '';
+    let liveSearchSnippet = '';
     try {
-      const res = await fetch("https://html.duckduckgo.com/html/?q=hlv%20manchester%20city", {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-        },
-        signal: AbortSignal.timeout(3000)
-      });
-      ddgStatus = `HTTP ${res.status} (Length: ${(await res.text()).length})`;
+      liveSearchSnippet = await searchWebRealtime("hlv của MC");
     } catch (e) {
-      ddgStatus = `Error: ${e.message}`;
+      liveSearchSnippet = `Error: ${e.message}`;
     }
 
     return res.status(200).json({
       status: "ok",
       message: "Zalo Bot Webhook is active and running",
-      searchEngineTest: ddgStatus,
+      liveSearchSnippet: liveSearchSnippet.slice(0, 300),
       environment: {
         hasZaloBotToken: Boolean(config.zaloBotToken),
         hasGeminiApiKey: Boolean(config.geminiApiKey),
