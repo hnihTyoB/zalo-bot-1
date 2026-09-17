@@ -119,7 +119,12 @@ async function sendPhoto(chatId, photoUrl, caption = '', parseMode = 'markdown')
       payload.parse_mode = parseMode;
     }
   }
-  return await callApi('sendPhoto', payload);
+  const res = await callApi('sendPhoto', payload);
+  try {
+    const storage = require('./storage');
+    storage.setLastImageUrl(chatId, photoUrl, { senderName: 'Bot', caption }).catch(() => {});
+  } catch (e) {}
+  return res;
 }
 
 /**
@@ -202,13 +207,8 @@ function extractPhotoFromObject(obj) {
     }
   }
 
-  // 4. Kiểm tra trường hợp đặc biệt: Tin nhắn STK ngân hàng của Bot
+  // 4. Kiểm tra URL ảnh trong text hoặc caption
   const textContent = obj.text || obj.content || obj.caption || '';
-  if (typeof textContent === 'string' && /Sacombank|070120022431|NGUYEN CHI THINH/i.test(textContent)) {
-    return 'https://zalo-bot-1.vercel.app/stk.jpg';
-  }
-
-  // 5. Kiểm tra URL ảnh trong text
   if (typeof textContent === 'string') {
     const match = textContent.match(/https?:\/\/[^\s"'\\]+(?:\.(?:jpg|jpeg|png|webp)|zadn\.vn\/[^\s"'\\]+|zaloapp\.com\/[^\s"'\\]+)/i);
     if (match) return match[0];

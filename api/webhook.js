@@ -187,15 +187,7 @@ module.exports = async (req, res) => {
     // 1. Kiểm tra ảnh trong tin nhắn được trích dẫn (quoted)
     photoUrl = findImageUrl(quoted, quoted, quoted?.message || quoted);
 
-    // 2. Nếu trích dẫn tin nhắn STK ngân hàng của bot
-    if (!photoUrl && quoted) {
-      const qText = quoted.text || quoted.content || quoted.message?.text || '';
-      if (/Sacombank|070120022431|NGUYEN CHI THINH/i.test(qText)) {
-        photoUrl = "https://zalo-bot-1.vercel.app/stk.jpg";
-      }
-    }
-
-    // 3. Nếu vẫn chưa có và người dùng có ý định phân tích ảnh hoặc quote có dấu hiệu là ảnh ([Hình ảnh])
+    // 2. Nếu vẫn chưa có và người dùng có ý định phân tích ảnh hoặc quote có dấu hiệu là ảnh ([Hình ảnh])
     if (!photoUrl && (isImageIntent || quoted?.msg_type?.includes('photo') || quoted?.msg_type?.includes('image') || /\[Hình ảnh\]|\[Photo\]|\[Image\]/i.test(quoted?.text || ''))) {
       photoUrl = await storage.getLastImageUrl(chatId);
     }
