@@ -72,7 +72,9 @@ THÔNG TIN TÌM KIẾM TRỰC TUYẾN MỚI NHẤT TỪ INTERNET (LIVE WEB DATA)
 ---
 - ${webContext}
 ---
-Hãy đối chiếu và ưu tiên sử dụng thông tin cập nhật thời gian thực ở trên để phản hồi chính xác nhất sự việc đang diễn ra ở thời điểm hiện tại.`;
+QUY TẮC BẮT BUỘC VỀ ĐÍNH CHÍNH & CẬP NHẬT THÔNG TIN:
+1. Thông tin trực tuyến (LIVE WEB DATA) ở trên là sự thật khách quan mới nhất. Bạn BẮT BUỘC phải dựa vào dữ liệu này để phản hồi.
+2. Nếu trong các tin nhắn trước đó của cuộc trò chuyện bạn đã từng đưa ra câu trả lời cũ hoặc chưa chính xác (ví dụ trước đó từng nói Pep Guardiola là HLV Man City, nhưng dữ liệu mới nhất cho thấy Enzo Maresca đã được bổ nhiệm làm HLV): Bạn BẮT BUỘC phải đính chính lại một cách văn minh, lịch sự, công nhận thông tin mới nhất và cập nhật cho người dùng, tuyệt đối KHÔNG được bảo thủ bám víu vào câu trả lời cũ trong lịch sử trò chuyện.`;
   }
 
   return instruction;
@@ -105,7 +107,16 @@ async function searchWebRealtime(query) {
       .replace(/\bhvl\b/gi, 'hlv')
       .replace(/\bmc\b/gi, 'manchester city')
       .replace(/\bmu\b/gi, 'manchester united')
+      .replace(/\bchel\b/gi, 'chelsea')
+      .replace(/\bars\b/gi, 'arsenal')
+      .replace(/\breal\b/gi, 'real madrid')
+      .replace(/\bbarca\b/gi, 'barcelona')
       .trim();
+
+    // Nếu hỏi về HLV/huấn luyện viên, thêm từ khóa "hiện tại mới nhất" để ưu tiên kết quả cập nhật
+    if (/\bhlv|huấn luyện viên/i.test(cleanQuery) && !/hiện tại|mới nhất|mùa giải/i.test(cleanQuery)) {
+      cleanQuery += ' hiện tại mới nhất';
+    }
 
     const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(cleanQuery)}`;
     const res = await fetch(url, {
