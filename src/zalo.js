@@ -60,14 +60,27 @@ async function sendChatAction(chatId, action = 'typing') {
 async function sendMessage(chatId, text, parseMode = 'markdown') {
   // Giới hạn Zalo là 2000 ký tự. Cắt nhỏ nếu quá dài
   const MAX_LEN = 1900;
+  const trimmed = String(text || '').trim();
 
-  if (text.length <= MAX_LEN) {
+  // Nếu tin nhắn chỉ là URL hoặc chứa URL có ký tự gạch dưới '_' (như link video YouTube)
+  // và không chứa định dạng markdown in đậm/nghiêng: Tự động tắt parseMode (gửi plain text)
+  // để Zalo không parse các dấu '_' trong link thành chữ in nghiêng, làm hỏng link.
+  const isPureUrl = /^https?:\/\/[^\s]+$/i.test(trimmed);
+  const containsUnderscoreUrl = /https?:\/\/[^\s]*_[^\s]*/i.test(trimmed);
+  const hasMarkdownFormat = /\*\*[^*]+\*\*|_[^_]+_|\`[^`]+\`/.test(trimmed.replace(/https?:\/\/[^\s]+/g, ''));
+
+  let effectiveParseMode = parseMode;
+  if (isPureUrl || (containsUnderscoreUrl && !hasMarkdownFormat)) {
+    effectiveParseMode = null;
+  }
+
+  if (trimmed.length <= MAX_LEN) {
     const payload = {
       chat_id: String(chatId),
-      text
+      text: trimmed
     };
-    if (parseMode) {
-      payload.parse_mode = parseMode;
+    if (effectiveParseMode) {
+      payload.parse_mode = effectiveParseMode;
     }
     return await callApi('sendMessage', payload);
   }
@@ -95,7 +108,7 @@ async function sendMessage(chatId, text, parseMode = 'markdown') {
       chat_id: String(chatId),
       text: chunk
     };
-    if (parseMode) payload.parse_mode = parseMode;
+    if (effectiveParseMode) payload.parse_mode = effectiveParseMode;
     lastRes = await callApi('sendMessage', payload);
   }
   return lastRes;

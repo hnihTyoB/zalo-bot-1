@@ -242,7 +242,9 @@ module.exports = async (req, res) => {
         console.log(`🔇 [PHỚT LỜ] Bot phớt lờ ảnh/tin nhắn xúc phạm từ ${senderName} (${senderId})`);
         return res.status(200).json({ ok: true, ignored: 'insult_cooldown' });
       }
-      const zaloRes = await sendMessage(chatId, aiReply, "markdown");
+      const isPureUrl = /^https?:\/\/[^\s]+$/i.test(aiReply.trim());
+      const parseMode = isPureUrl ? null : "markdown";
+      const zaloRes = await sendMessage(chatId, aiReply, parseMode);
       return res.status(200).json({ ok: true, zalo: zaloRes });
     } catch (err) {
       clearInterval(typingTimer);
@@ -783,7 +785,9 @@ module.exports = async (req, res) => {
       console.log(`🔇 [PHỚT LỜ] Bot phớt lờ tin nhắn xúc phạm từ ${senderName} (${senderId})`);
       return res.status(200).json({ ok: true, ignored: 'insult_cooldown' });
     }
-    const zaloRes = await sendMessage(chatId, aiReply, "markdown");
+    const isPureUrl = /^https?:\/\/[^\s]+$/i.test(aiReply.trim());
+    const parseMode = isPureUrl ? null : "markdown";
+    const zaloRes = await sendMessage(chatId, aiReply, parseMode);
     return res.status(200).json({ ok: true, zalo: zaloRes });
   } catch (err) {
     clearInterval(typingTimer);

@@ -199,7 +199,9 @@ async function handleMessage(eventData) {
         return;
       }
 
-      await sendMessage(chatId, aiReply, "markdown");
+      const isPureUrl = /^https?:\/\/[^\s]+$/i.test(aiReply.trim());
+      const parseMode = isPureUrl ? null : "markdown";
+      await sendMessage(chatId, aiReply, parseMode);
       console.log(`✅ Đã gửi phân tích ảnh thành công tới ${senderName}`);
     } catch (err) {
       clearInterval(typingTimer);
@@ -738,7 +740,9 @@ async function handleMessage(eventData) {
     }
 
     // Gửi phản hồi lại cho người dùng qua Zalo
-    await sendMessage(chatId, aiReply, "markdown");
+    const isPureUrl = /^https?:\/\/[^\s]+$/i.test(aiReply.trim());
+    const parseMode = isPureUrl ? null : "markdown";
+    await sendMessage(chatId, aiReply, parseMode);
     console.log(`✅ Đã gửi phản hồi thành công tới ${senderName}`);
   } catch (err) {
     clearInterval(typingTimer);
