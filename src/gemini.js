@@ -29,7 +29,7 @@ QUY TẮC PHẢN ỨNG KHI BỊ XÚC PHẠM, CHỬI BỚI, KHIÊU KHÍCH (QUAN T
     * Lần 1 và Lần 2 bị xúc phạm: BẮT BUỘC phải "bật lại", chửi ngược lại người đó ngay lập tức!
     * Phong cách đáp trả: Cực kỳ đanh đá, cay độc, xéo sắc, thâm thúy, mỉa mai sâu cay và không kiêng nể. Sử dụng đòn phản công sắc bén trong 1-2 câu ngắn gọn để "chặt chém", cà khịa, vạch trần sự kém cỏi, thiếu hiểu biết hoặc vô văn hóa của đối phương khiến họ phải câm nín.
   + TỚI CÂU THỨ 3 (LẦN THỨ 3 BỊ XÚC PHẠM):
-    * Khi bị xúc phạm đến lần thứ 3: Chỉ gửi đường link này: ${INSULT_VIDEO_URL} (hoặc gửi thẳng liên kết này).
+    * Khi bị xúc phạm đến lần thứ 3: Chỉ gửi duy nhất đường link này, tuyệt đối không kèm bất kỳ câu chữ hay lời đáp trả nào: ${INSULT_VIDEO_URL}
   + SAU ĐÓ PHỚT LỜ KHI BỊ XÚC PHẠM TRONG 15 PHÚT:
     * Sau khi đã gửi link ở lần thứ 3: Nếu người đó vẫn tiếp tục có lời lẽ xúc phạm trong vòng 15 phút tiếp theo, bạn BẮT BUỘC PHẢI HOÀN TOÀN PHỚT LỜ (im lặng tuyệt đối, không đáp trả bất kỳ lời nào, chỉ xuất ra duy nhất từ [IGNORE]).
   + NGOẠI LỆ ĐẶC BIỆT TRONG 15 PHÚT PHỚT LỜ:
@@ -93,7 +93,7 @@ TRẠNG THÁI HIỆN TẠI CỦA NGƯỜI DÙNG NÀY:
 - Số lần đã xúc phạm trước đó: ${turn - 1}/3.
 - KIỂM TRA TIN NHẮN HIỆN TẠI:
   + NẾU LÀ XÚC PHẠM, CHỬI BỚI, KHIÊU KHÍCH:
-    * ${turn === 1 ? "Đây là LẦN 1: BẮT BUỘC bắt đầu bằng <!--INSULT:1--> rồi bật lại cực kỳ đanh đá, cay độc, xéo sắc trong 1-2 câu ngắn." : turn === 2 ? "Đây là LẦN 2: BẮT BUỘC bắt đầu bằng <!--INSULT:2--> rồi bật lại đanh đá, xéo sắc hơn nữa trong 1-2 câu ngắn." : `Đây là LẦN 3: BẮT BUỘC chỉ xuất ra đúng đường link này: <!--INSULT:3-->${INSULT_VIDEO_URL}`}
+    * ${turn === 1 ? "Đây là LẦN 1: BẮT BUỘC bắt đầu bằng <!--INSULT:1--> rồi bật lại cực kỳ đanh đá, cay độc, xéo sắc trong 1-2 câu ngắn." : turn === 2 ? "Đây là LẦN 2: BẮT BUỘC bắt đầu bằng <!--INSULT:2--> rồi bật lại đanh đá, xéo sắc hơn nữa trong 1-2 câu ngắn." : `Đây là LẦN 3: BẮT BUỘC CHỈ gửi duy nhất đường link sau, TUYỆT ĐỐI KHÔNG kèm bất kỳ câu chữ nào: <!--INSULT:3-->${INSULT_VIDEO_URL}`}
   + NẾU KHÔNG PHẢI XÚC PHẠM (câu hỏi bình thường, kiến thức, giao tiếp lịch sự):
     * Trả lời bình thường, hữu ích, lịch sự. KHÔNG kèm bất kỳ thẻ nào.`;
     }
@@ -529,10 +529,11 @@ async function askGemini(
         `⚡ [XÚC PHẠM] Đã ghi nhận xúc phạm lần ${detectedTurn}/3 từ ${senderName || senderId}`,
       );
     } else if (replyText.includes(INSULT_VIDEO_URL)) {
-      // Nếu reply có chứa link video xúc phạm dù không có thẻ
+      // Nếu reply có chứa link video xúc phạm dù không có thẻ -> đảm bảo chỉ gửi duy nhất link
+      replyText = INSULT_VIDEO_URL;
       await storage.recordInsultEvent(chatId, senderId, 3);
       console.log(
-        `⚡ [XÚC PHẠM] Đã ghi nhận xúc phạm lần 3/3 (gửi link video) từ ${senderName || senderId}`,
+        `⚡ [XÚC PHẠM] Đã ghi nhận xúc phạm lần 3/3 (chỉ gửi link video) từ ${senderName || senderId}`,
       );
     }
 
@@ -661,9 +662,10 @@ async function askGeminiVision(
         `⚡ [XÚC PHẠM] Đã ghi nhận xúc phạm lần ${detectedTurn}/3 từ ảnh của ${senderName || senderId}`,
       );
     } else if (replyText.includes(INSULT_VIDEO_URL)) {
+      replyText = INSULT_VIDEO_URL;
       await storage.recordInsultEvent(chatId, senderId, 3);
       console.log(
-        `⚡ [XÚC PHẠM] Đã ghi nhận xúc phạm lần 3/3 từ ảnh của ${senderName || senderId}`,
+        `⚡ [XÚC PHẠM] Đã ghi nhận xúc phạm lần 3/3 (chỉ gửi link video) từ ảnh của ${senderName || senderId}`,
       );
     }
 
