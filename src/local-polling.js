@@ -1,6 +1,7 @@
 const {
   getMe,
   getWebhookInfo,
+  setWebhook,
   deleteWebhook,
   getUpdates,
   sendMessage,
@@ -22,6 +23,7 @@ const config = require("./config");
 
 let isRunning = true;
 let botInfo = null;
+let previousWebhookUrl = null;
 
 // Lệnh hỗ trợ
 const HELP_TEXT = `🤖 **HƯỚNG DẪN SỬ DỤNG BOT HTD MEDIA (AI ĐA NĂNG)**
@@ -773,6 +775,7 @@ async function startPolling() {
     // 2. Đảm bảo Webhook đã được giải phóng để getUpdates hoạt động
     const wh = await getWebhookInfo();
     if (wh.ok && wh.result?.url) {
+      previousWebhookUrl = wh.result.url;
       console.log(
         `ℹ️ Phát hiện Webhook cũ (${wh.result.url}). Đang hủy Webhook để chuyển sang Polling...`,
       );
@@ -829,11 +832,23 @@ async function startPolling() {
   }
 }
 
-// Bắt tín hiệu dừng chương trình gọn gàng
-process.on("SIGINT", () => {
+// Bắt tín hiệu dừng chương trình gọn gàng và tự động khôi phục Webhook
+const handleExit = async () => {
   console.log("\n🛑 Đang dừng Bot...");
   isRunning = false;
+  if (previousWebhookUrl) {
+    try {
+      console.log(`🔄 Đang tự động khôi phục Webhook URL: ${previousWebhookUrl}...`);
+      await setWebhook(previousWebhookUrl, config.webhookSecretToken);
+      console.log("✅ Đã khôi phục Webhook thành công!");
+    } catch (e) {
+      console.warn("⚠️ Không thể khôi phục Webhook:", e.message);
+    }
+  }
   process.exit(0);
-});
+};
+
+process.on("SIGINT", handleExit);
+process.on("SIGTERM", handleExit);
 
 startPolling();
