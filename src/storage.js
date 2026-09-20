@@ -10,8 +10,11 @@ const MAX_GROUP_BUFFER = 50;
 const CONVERSATION_TTL_SECONDS = 86400; // 24 giờ
 const GROUP_BUFFER_TTL_SECONDS = 43200; // 12 giờ
 const LAST_IMAGE_TTL_SECONDS = 7200; // 2 giờ
+const INSULT_COOLDOWN_SECONDS = 900; // 15 phút (900 giây)
+const INSULT_STATE_TTL_SECONDS = 1800; // 30 phút
 const REDIS_REMINDERS_KEY = 'zalo:reminders:list';
 const memoryLastImages = new Map();
+const memoryInsults = new Map();
 
 /**
  * Thực thi lệnh Upstash Redis qua REST API (Chuẩn Serverless không cần dependency)
@@ -474,6 +477,117 @@ async function getLastImageUrl(chatId) {
   return mem?.photoUrl || null;
 }
 
+// ==========================================
+// QUẢN LÝ TRẠNG THÁI XÚC PHẠM & COOLDOWN 15 PHÚT
+// ==========================================
+
+/**
+ * Lấy trạng thái xúc phạm của người dùng trong cuộc trò chuyện
+ * @param {string|number} chatId
+ * @param {string|number} [senderId]
+ * @returns {Promise<{ count: number, lastTime: number, cooldownUntil: number, inCooldown: boolean, cooldownRemainingMinutes: number }>}
+ */
+async function getInsultState(chatId, senderId) {
+  const sid = String(senderId || chatId);
+  const key = `zalo:insult:${chatId}:${sid}`;
+  const now = Date.now();
+  let state = null;
+
+  if (config.upstashRedisRestUrl && config.upstashRedisRestToken) {
+    const raw = await callRedisCommand('GET', key);
+    if (raw) {
+      try {
+        state = JSON.parse(raw);
+      } catch (e) {}
+    }
+  }
+
+  if (!state) {
+    state = memoryInsults.get(key) || { count: 0, lastTime: 0, cooldownUntil: 0 };
+  }
+
+  // Kiểm tra hết hạn cooldown 15 phút
+  if (state.cooldownUntil > 0 && now >= state.cooldownUntil) {
+    state = { count: 0, lastTime: 0, cooldownUntil: 0 };
+    memoryInsults.set(key, state);
+    if (config.upstashRedisRestUrl && config.upstashRedisRestToken) {
+      await callRedisCommand('DEL', key);
+    }
+  } else if (state.cooldownUntil === 0 && state.count > 0 && (now - state.lastTime > INSULT_COOLDOWN_SECONDS * 1000)) {
+    // Nếu quá 15 phút không tiếp tục xúc phạm, reset lại chu kỳ
+    state = { count: 0, lastTime: 0, cooldownUntil: 0 };
+    memoryInsults.set(key, state);
+    if (config.upstashRedisRestUrl && config.upstashRedisRestToken) {
+      await callRedisCommand('DEL', key);
+    }
+  }
+
+  const inCooldown = state.cooldownUntil > now;
+  const cooldownRemainingMinutes = inCooldown ? Math.ceil((state.cooldownUntil - now) / 60000) : 0;
+
+  return {
+    ...state,
+    inCooldown,
+    cooldownRemainingMinutes
+  };
+}
+
+/**
+ * Ghi nhận một lượt xúc phạm từ người dùng
+ * @param {string|number} chatId
+ * @param {string|number} senderId
+ * @param {number} [detectedTurn] Lượt xúc phạm (1, 2, 3)
+ * @returns {Promise<{ ignored: boolean, count: number, cooldownUntil: number }>}
+ */
+async function recordInsultEvent(chatId, senderId, detectedTurn = null) {
+  const sid = String(senderId || chatId);
+  const key = `zalo:insult:${chatId}:${sid}`;
+  const now = Date.now();
+  const current = await getInsultState(chatId, senderId);
+
+  if (current.inCooldown) {
+    return { ignored: true, count: current.count, cooldownUntil: current.cooldownUntil };
+  }
+
+  let nextCount = detectedTurn || (current.count + 1);
+  let cooldownUntil = 0;
+  if (nextCount >= 3) {
+    nextCount = 3;
+    cooldownUntil = now + INSULT_COOLDOWN_SECONDS * 1000;
+  }
+
+  const newState = {
+    count: nextCount,
+    lastTime: now,
+    cooldownUntil
+  };
+
+  memoryInsults.set(key, newState);
+  if (config.upstashRedisRestUrl && config.upstashRedisRestToken) {
+    await callRedisCommand('SET', key, JSON.stringify(newState), 'EX', INSULT_STATE_TTL_SECONDS);
+  }
+
+  return {
+    ignored: false,
+    count: nextCount,
+    cooldownUntil
+  };
+}
+
+/**
+ * Xóa trạng thái xúc phạm của người dùng
+ * @param {string|number} chatId
+ * @param {string|number} [senderId]
+ */
+async function clearInsultState(chatId, senderId) {
+  const sid = String(senderId || chatId);
+  const key = `zalo:insult:${chatId}:${sid}`;
+  memoryInsults.delete(key);
+  if (config.upstashRedisRestUrl && config.upstashRedisRestToken) {
+    await callRedisCommand('DEL', key);
+  }
+}
+
 module.exports = {
   getConversationHistory,
   saveConversationHistory,
@@ -493,7 +607,10 @@ module.exports = {
   removeBlockedUser,
   isUserBlocked,
   setLastImageUrl,
-  getLastImageUrl
+  getLastImageUrl,
+  getInsultState,
+  recordInsultEvent,
+  clearInsultState
 };
 
 

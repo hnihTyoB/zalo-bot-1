@@ -236,8 +236,12 @@ module.exports = async (req, res) => {
     }, 2500);
 
     try {
-      const aiReply = await askGeminiVision(chatId, caption, photoUrl);
+      const aiReply = await askGeminiVision(chatId, caption, photoUrl, { senderId, senderName });
       clearInterval(typingTimer);
+      if (!aiReply || aiReply === '[IGNORE]' || aiReply.trim() === '') {
+        console.log(`🔇 [PHỚT LỜ] Bot phớt lờ ảnh/tin nhắn xúc phạm từ ${senderName} (${senderId})`);
+        return res.status(200).json({ ok: true, ignored: 'insult_cooldown' });
+      }
       const zaloRes = await sendMessage(chatId, aiReply, "markdown");
       return res.status(200).json({ ok: true, zalo: zaloRes });
     } catch (err) {
@@ -773,8 +777,12 @@ module.exports = async (req, res) => {
   }, 2500);
 
   try {
-    const aiReply = await askGemini(chatId, rawText);
+    const aiReply = await askGemini(chatId, rawText, { senderId, senderName });
     clearInterval(typingTimer);
+    if (!aiReply || aiReply === '[IGNORE]' || aiReply.trim() === '') {
+      console.log(`🔇 [PHỚT LỜ] Bot phớt lờ tin nhắn xúc phạm từ ${senderName} (${senderId})`);
+      return res.status(200).json({ ok: true, ignored: 'insult_cooldown' });
+    }
     const zaloRes = await sendMessage(chatId, aiReply, "markdown");
     return res.status(200).json({ ok: true, zalo: zaloRes });
   } catch (err) {

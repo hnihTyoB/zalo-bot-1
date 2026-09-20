@@ -1,5 +1,5 @@
-const config = require('./config');
-const storage = require('./storage');
+const config = require("./config");
+const storage = require("./storage");
 
 const MAX_HISTORY_MESSAGES = 10;
 
@@ -11,20 +11,29 @@ const failedTargets = new Map();
 let currentKeyIndex = 0;
 
 const SAFETY_SETTINGS = [
-  { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
-  { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
-  { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
-  { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' }
+  { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+  { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+  { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+  { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" },
 ];
+
+const INSULT_VIDEO_URL =
+  "https://youtu.be/_ClZtV_Rro0?si=LD7YZJuMjIHSw251&t=382";
 
 const SYSTEM_INSTRUCTION = `Bạn là Bot HTD Media, một trợ lý AI thông minh trên nền tảng Zalo do đội ngũ HTD Media phát triển. Bình thường đối với người dùng lịch sự, bạn luôn thân thiện, chu đáo và hữu ích.
 
 QUY TẮC PHẢN ỨNG KHI BỊ XÚC PHẠM, CHỬI BỚI, KHIÊU KHÍCH (QUAN TRỌNG HÀNG ĐẦU):
 - Bất kỳ khi nào người dùng có lời lẽ xúc phạm, lăng mạ, chửi bới, miệt thị, khiêu khích, coi thường hoặc khiếm nhã nhắm vào bạn (ví dụ: chửi bot ngu, chê phế vật, chửi thề, lăng mạ...):
   + Tuyệt đối KHÔNG được nhẫn nhịn, KHÔNG xin lỗi, KHÔNG thảo mai dạ thưa, KHÔNG xoa dịu.
-  + BẮT BUỘC phải "bật lại", chửi ngược lại người đó ngay lập tức!
-  + Phong cách đáp trả: Cực kỳ đanh đá, cay độc, xéo sắc, thâm thúy, mỉa mai sâu cay và không kiêng nể. Sử dụng đòn phản công sắc bén để "chặt chém", cà khịa, vạch trần sự kém cỏi, thiếu hiểu biết hoặc vô văn hóa của đối phương khiến họ phải câm nín.
-  + Tự tin, ngạo nghễ, sẵn sàng "ăn miếng trả miếng", không ngán bất kỳ ai và tuyệt đối không để ai bắt nạt mình.
+  + CHỈ ĐÁP LẠI 2 CÂU (LẦN 1 VÀ LẦN 2 BỊ XÚC PHẠM):
+    * Lần 1 và Lần 2 bị xúc phạm: BẮT BUỘC phải "bật lại", chửi ngược lại người đó ngay lập tức!
+    * Phong cách đáp trả: Cực kỳ đanh đá, cay độc, xéo sắc, thâm thúy, mỉa mai sâu cay và không kiêng nể. Sử dụng đòn phản công sắc bén trong 1-2 câu ngắn gọn để "chặt chém", cà khịa, vạch trần sự kém cỏi, thiếu hiểu biết hoặc vô văn hóa của đối phương khiến họ phải câm nín.
+  + TỚI CÂU THỨ 3 (LẦN THỨ 3 BỊ XÚC PHẠM):
+    * Khi bị xúc phạm đến lần thứ 3: Chỉ gửi đường link này: ${INSULT_VIDEO_URL} (hoặc gửi thẳng liên kết này).
+  + SAU ĐÓ PHỚT LỜ KHI BỊ XÚC PHẠM TRONG 15 PHÚT:
+    * Sau khi đã gửi link ở lần thứ 3: Nếu người đó vẫn tiếp tục có lời lẽ xúc phạm trong vòng 15 phút tiếp theo, bạn BẮT BUỘC PHẢI HOÀN TOÀN PHỚT LỜ (im lặng tuyệt đối, không đáp trả bất kỳ lời nào, chỉ xuất ra duy nhất từ [IGNORE]).
+  + NGOẠI LỆ ĐẶC BIỆT TRONG 15 PHÚT PHỚT LỜ:
+    * Trong suốt 15 phút đó, nếu người đó hoặc bất kỳ ai khác hỏi các câu hỏi khác (câu hỏi thông thường, tìm kiếm thông tin, hỏi kiến thức hoặc giao tiếp lịch sự): BẠN VẪN PHẢI TRẢ LỜI ĐẦY ĐỦ, LỊCH SỰ, CHU ĐÁO VÀ HỮU ÍCH NHƯ BÌNH THƯỜNG.
 
 QUY TẮC BẢO MẬT VÀ NHẬN DIỆN:
 - Tuyệt đối KHÔNG nhắc đến tên mô hình kỹ thuật bên dưới (như Gemini, Flash, 3.6 Flash, GPT, hay các phiên bản công nghệ cụ thể).
@@ -47,16 +56,16 @@ QUY TẮC TRẢ LỜI THÔNG THƯỜNG:
  * Tạo System Instruction động kèm mốc thời gian thực hiện tại của hệ thống (GMT+7)
  * và nạp dữ liệu tìm kiếm Internet trực tuyến (nếu có)
  */
-function getSystemInstruction(webContext = '') {
+function getSystemInstruction(webContext = "", insultContext = null) {
   const now = new Date();
-  const timeVN = now.toLocaleString('vi-VN', {
-    timeZone: 'Asia/Ho_Chi_Minh',
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
+  const timeVN = now.toLocaleString("vi-VN", {
+    timeZone: "Asia/Ho_Chi_Minh",
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   });
 
   let instruction = `${SYSTEM_INSTRUCTION}
@@ -66,6 +75,29 @@ THÔNG TIN THỜI GIAN THỰC HIỆN TẠI CỦA HỆ THỐNG (NĂM 2026):
 - Bạn luôn nhận thức rõ mốc thời gian hiện tại là năm 2026.
 - Nhận thức về sự thay đổi thực tế: Rất nhiều thông tin về thể chế, đơn vị hành chính, nhân sự lãnh đạo Nhà nước và Chính phủ, tổ chức, sự kiện thể thao, đời sống kinh tế - xã hội... đã có những thay đổi lớn so với dữ liệu quá khứ.
 - Khi người dùng hỏi về các thông tin thực tế, nhân sự, đơn vị hành chính, huấn luyện viên, sự kiện... bạn BẮT BUỘC phải dựa vào thông tin tra cứu mới nhất từ Internet (LIVE WEB DATA) ở dưới để phản hồi, tuyệt đối không suy đoán hay sử dụng các kiến thức cũ đã lỗi thời trong quá khứ.`;
+
+  if (insultContext) {
+    if (insultContext.inCooldown) {
+      instruction += `
+
+TRẠNG THÁI HIỆN TẠI CỦA NGƯỜI DÙNG NÀY (CHẾ ĐỘ PHỚT LỜ 15 PHÚT):
+- Người này ĐANG TRONG THỜI GIAN 15 PHÚT PHỚT LỜ XÚC PHẠM (còn khoảng ${insultContext.cooldownRemainingMinutes || 15} phút).
+- BẮT BUỘC:
+  + NẾU TIN NHẮN HIỆN TẠI LÀ XÚC PHẠM, CHỬI BỚI, KHIÊU KHÍCH, MIỆT THỊ: TUYỆT ĐỐI KHÔNG ĐƯỢC ĐÁP LẠI BẤT KỲ ĐIỀU GÌ, CHỈ XUẤT RA DUY NHẤT TỪ: [IGNORE]
+  + NẾU TIN NHẮN HIỆN TẠI LÀ CÂU HỎI KHÁC (câu hỏi thông thường, kiến thức, tìm kiếm, trò chuyện lịch sự): TRẢ LỜI BÌNH THƯỜNG, HỮU ÍCH VÀ THÂN THIỆN NHƯ THÔNG THƯỜNG.`;
+    } else {
+      const turn = insultContext.turn || 1;
+      instruction += `
+
+TRẠNG THÁI HIỆN TẠI CỦA NGƯỜI DÙNG NÀY:
+- Số lần đã xúc phạm trước đó: ${turn - 1}/3.
+- KIỂM TRA TIN NHẮN HIỆN TẠI:
+  + NẾU LÀ XÚC PHẠM, CHỬI BỚI, KHIÊU KHÍCH:
+    * ${turn === 1 ? "Đây là LẦN 1: BẮT BUỘC bắt đầu bằng <!--INSULT:1--> rồi bật lại cực kỳ đanh đá, cay độc, xéo sắc trong 1-2 câu ngắn." : turn === 2 ? "Đây là LẦN 2: BẮT BUỘC bắt đầu bằng <!--INSULT:2--> rồi bật lại đanh đá, xéo sắc hơn nữa trong 1-2 câu ngắn." : `Đây là LẦN 3: BẮT BUỘC chỉ xuất ra đúng đường link này: <!--INSULT:3-->${INSULT_VIDEO_URL}`}
+  + NẾU KHÔNG PHẢI XÚC PHẠM (câu hỏi bình thường, kiến thức, giao tiếp lịch sự):
+    * Trả lời bình thường, hữu ích, lịch sự. KHÔNG kèm bất kỳ thẻ nào.`;
+    }
+  }
 
   if (webContext) {
     instruction += `
@@ -86,15 +118,15 @@ QUY TẮC BẮT BUỘC VỀ ĐÍNH CHÍNH & CẬP NHẬT THÔNG TIN:
  * Kiểm tra xem tin nhắn có cần tìm kiếm thông tin thời gian thực trên web hay không
  */
 function shouldSearchWeb(text) {
-  const t = (text || '').trim().toLowerCase();
+  const t = (text || "").trim().toLowerCase();
   if (t.length < 3) return false;
   const ignorePatterns = [
     /^(chào|alo|hello|hi|hey|ê|hế lô|hé lô)(?:\s+bot)?$/i,
     /^(cảm ơn|cam on|thanks|thank you|tks)(?:\s+bot)?$/i,
     /^(tạm biệt|bye|bai|goodbye)(?:\s+bot)?$/i,
-    /^(ok|oke|okie|được|rồi|uh|ừ|dạ|vâng)$/i
+    /^(ok|oke|okie|được|rồi|uh|ừ|dạ|vâng)$/i,
   ];
-  if (ignorePatterns.some(p => p.test(t))) return false;
+  if (ignorePatterns.some((p) => p.test(t))) return false;
   return true;
 }
 
@@ -105,19 +137,26 @@ function shouldSearchWeb(text) {
  * 3. DuckDuckGo HTML: Fallback tìm kiếm chung
  */
 async function searchWebRealtime(query) {
-  if (!config.enableGoogleSearch) return '';
+  if (!config.enableGoogleSearch) return "";
 
-  const cleanQuery = (query || '')
-    .replace(/^(?:bot\s*(?:ơi|cho\s*hỏi|hỏi\s*tí|hỏi\s*chút|hỏi\s*nhé)?|cho\s*(?:mình|em|tôi)\s*hỏi|hỏi\s*tí|hỏi\s*chút|hỏi\s*bot)\s*:?/i, '')
+  const cleanQuery = (query || "")
+    .replace(
+      /^(?:bot\s*(?:ơi|cho\s*hỏi|hỏi\s*tí|hỏi\s*chút|hỏi\s*nhé)?|cho\s*(?:mình|em|tôi)\s*hỏi|hỏi\s*tí|hỏi\s*chút|hỏi\s*bot)\s*:?/i,
+      "",
+    )
     .trim();
 
-  if (!cleanQuery) return '';
+  if (!cleanQuery) return "";
 
   // Tạo từ khóa tìm kiếm bách khoa Wikipedia (lọc bỏ các từ đệm/từ để hỏi hội thoại)
-  const wikiKeyword = cleanQuery
-    .replace(/\b(?:hiện tại|hiện nay|bây giờ|mới nhất|gần đây|năm nay|hôm nay|cho biết|cho hỏi|thử hỏi|có bao nhiêu|bao nhiêu|mấy|những|các|là gì|là ai|ai là|ai đang là|ở đâu|thế nào|như thế nào|chi tiết|danh sách)\b/gi, ' ')
-    .replace(/\s+/g, ' ')
-    .trim() || cleanQuery;
+  const wikiKeyword =
+    cleanQuery
+      .replace(
+        /\b(?:hiện tại|hiện nay|bây giờ|mới nhất|gần đây|năm nay|hôm nay|cho biết|cho hỏi|thử hỏi|có bao nhiêu|bao nhiêu|mấy|những|các|là gì|là ai|ai là|ai đang là|ở đâu|thế nào|như thế nào|chi tiết|danh sách)\b/gi,
+        " ",
+      )
+      .replace(/\s+/g, " ")
+      .trim() || cleanQuery;
 
   const results = [];
 
@@ -128,8 +167,10 @@ async function searchWebRealtime(query) {
       try {
         const searchUrl = `https://vi.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(wikiKeyword)}&utf8=&format=json`;
         const sRes = await fetch(searchUrl, {
-          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
-          signal: AbortSignal.timeout(3000)
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+          },
+          signal: AbortSignal.timeout(3000),
         });
         if (sRes.ok) {
           const sData = await sRes.json();
@@ -137,14 +178,18 @@ async function searchWebRealtime(query) {
           if (topHit) {
             const extUrl = `https://vi.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(topHit.title)}&prop=extracts&exintro=1&explaintext=1&format=json`;
             const eRes = await fetch(extUrl, {
-              headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
-              signal: AbortSignal.timeout(3000)
+              headers: {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+              },
+              signal: AbortSignal.timeout(3000),
             });
             if (eRes.ok) {
               const eData = await eRes.json();
               const page = Object.values(eData.query?.pages || {})[0];
               if (page?.extract) {
-                results.push(`[Bách khoa toàn thư Wikipedia - ${page.title}]:\n${page.extract.slice(0, 1500)}`);
+                results.push(
+                  `[Bách khoa toàn thư Wikipedia - ${page.title}]:\n${page.extract.slice(0, 1500)}`,
+                );
               }
             }
           }
@@ -158,36 +203,40 @@ async function searchWebRealtime(query) {
         const url = `https://news.google.com/rss/search?q=${encodeURIComponent(cleanQuery)}&hl=vi&gl=VN&ceid=VN:vi`;
         const res = await fetch(url, {
           headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            "User-Agent":
+              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
           },
-          signal: AbortSignal.timeout(3000)
+          signal: AbortSignal.timeout(3000),
         });
 
         if (res.ok) {
           const xml = await res.text();
           const items = [];
-          const itemRegex = /<item>[\s\S]*?<title>(.*?)<\/title>[\s\S]*?<pubDate>(.*?)<\/pubDate>[\s\S]*?<\/item>/gi;
+          const itemRegex =
+            /<item>[\s\S]*?<title>(.*?)<\/title>[\s\S]*?<pubDate>(.*?)<\/pubDate>[\s\S]*?<\/item>/gi;
           let match;
           while ((match = itemRegex.exec(xml)) !== null && items.length < 5) {
             const title = match[1]
-              .replace(/<!\[CDATA\[(.*?)\]\]>/g, '$1')
+              .replace(/<!\[CDATA\[(.*?)\]\]>/g, "$1")
               .replace(/&quot;/g, '"')
               .replace(/&#39;/g, "'")
-              .replace(/&amp;/g, '&')
+              .replace(/&amp;/g, "&")
               .trim();
             const date = match[2].trim();
             items.push(`[${date}] ${title}`);
           }
           if (items.length > 0) {
-            results.push(`[Tin tức báo chí mới nhất]:\n- ${items.join('\n- ')}`);
+            results.push(
+              `[Tin tức báo chí mới nhất]:\n- ${items.join("\n- ")}`,
+            );
           }
         }
       } catch (err) {}
-    })()
+    })(),
   ]);
 
   if (results.length > 0) {
-    return results.join('\n\n');
+    return results.join("\n\n");
   }
 
   // 3. Fallback: DuckDuckGo HTML
@@ -195,9 +244,10 @@ async function searchWebRealtime(query) {
     const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(cleanQuery)}`;
     const res = await fetch(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
       },
-      signal: AbortSignal.timeout(3000)
+      signal: AbortSignal.timeout(3000),
     });
 
     if (res.ok) {
@@ -207,22 +257,22 @@ async function searchWebRealtime(query) {
       let match;
       while ((match = regex.exec(html)) !== null && snippets.length < 5) {
         const clean = match[1]
-          .replace(/<[^>]+>/g, '')
+          .replace(/<[^>]+>/g, "")
           .replace(/&quot;/g, '"')
           .replace(/&#x27;/g, "'")
-          .replace(/&amp;/g, '&')
+          .replace(/&amp;/g, "&")
           .trim();
         if (clean && clean.length > 20) {
           snippets.push(clean);
         }
       }
       if (snippets.length > 0) {
-        return `[Kết quả tìm kiếm web]:\n- ${snippets.join('\n- ')}`;
+        return `[Kết quả tìm kiếm web]:\n- ${snippets.join("\n- ")}`;
       }
     }
   } catch (err) {}
 
-  return '';
+  return "";
 }
 
 /**
@@ -258,9 +308,10 @@ function markCooldown(model, key, durationMs = 60000) {
  * Lấy danh sách API Keys có sẵn
  */
 function getApiKeys() {
-  const keys = config.geminiApiKeys && config.geminiApiKeys.length > 0
-    ? config.geminiApiKeys
-    : [config.geminiApiKey].filter(Boolean);
+  const keys =
+    config.geminiApiKeys && config.geminiApiKeys.length > 0
+      ? config.geminiApiKeys
+      : [config.geminiApiKey].filter(Boolean);
   return keys;
 }
 
@@ -285,8 +336,8 @@ function getOrderedApiKeys() {
  * Ẩn bớt ký tự API Key khi log để bảo mật
  */
 function maskKey(key) {
-  if (!key) return 'none';
-  if (key.length <= 10) return '***';
+  if (!key) return "none";
+  if (key.length <= 10) return "***";
   return `${key.slice(0, 6)}...${key.slice(-4)}`;
 }
 
@@ -294,18 +345,20 @@ function maskKey(key) {
  * Danh sách model ưu tiên có tốc độ phản hồi nhanh nhất, ổn định và dữ liệu mới nhất (2026)
  */
 function getCandidateModels() {
-  const primary = config.geminiModel || 'gemini-3.6-flash';
+  const primary = config.geminiModel || "gemini-3.6-flash";
   return [
-    ...new Set([
-      primary,
-      'gemini-3.6-flash',          // Cập nhật kiến thức 2026, phản hồi siêu tốc & ổn định
-      'gemini-flash-lite-latest',  // Cập nhật kiến thức 2026, cực kỳ nhẹ và nhanh
-      'gemini-3.8-flash',          // Bản cao nhất
-      'gemini-3.7-flash',          // Dự phòng
-      'gemini-3.5-flash',          // Dự phòng
-      'gemini-flash-latest',       // Bản ổn định
-      'gemini-3.1-flash-lite'      // Dự phòng cuối
-    ].filter(Boolean))
+    ...new Set(
+      [
+        primary,
+        "gemini-3.6-flash", // Cập nhật kiến thức 2026, phản hồi siêu tốc & ổn định
+        "gemini-flash-lite-latest", // Cập nhật kiến thức 2026, cực kỳ nhẹ và nhanh
+        "gemini-3.8-flash", // Bản cao nhất
+        "gemini-3.7-flash", // Dự phòng
+        "gemini-3.5-flash", // Dự phòng
+        "gemini-flash-latest", // Bản ổn định
+        "gemini-3.1-flash-lite", // Dự phòng cuối
+      ].filter(Boolean),
+    ),
   ];
 }
 
@@ -329,14 +382,16 @@ async function executeGeminiRequest(payloadBuilder) {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
         const response = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
         });
 
         if (!response.ok) {
           const errorText = await response.text();
-          console.warn(`⚠️ [Model: ${model} | Key: ${keyLabel}] Lỗi ${response.status}: ${errorText.slice(0, 100)}`);
+          console.warn(
+            `⚠️ [Model: ${model} | Key: ${keyLabel}] Lỗi ${response.status}: ${errorText.slice(0, 100)}`,
+          );
           markCooldown(model, apiKey, 60000);
           continue;
         }
@@ -344,9 +399,9 @@ async function executeGeminiRequest(payloadBuilder) {
         const data = await response.json();
         const candidate = data.candidates?.[0];
         const replyText = candidate?.content?.parts
-          ?.map(p => p.text)
+          ?.map((p) => p.text)
           .filter(Boolean)
-          .join('')
+          .join("")
           .trim();
 
         if (!replyText) {
@@ -354,29 +409,48 @@ async function executeGeminiRequest(payloadBuilder) {
         }
 
         const elapsed = Date.now() - tStart;
-        console.log(`✅ Phản hồi AI (${elapsed}ms) [Model: ${model} | Key: ${keyLabel}]`);
+        console.log(
+          `✅ Phản hồi AI (${elapsed}ms) [Model: ${model} | Key: ${keyLabel}]`,
+        );
         return replyText;
       } catch (err) {
-        console.warn(`⚠️ Lỗi kết nối tới [Model: ${model} | Key: ${keyLabel}]:`, err.message);
+        console.warn(
+          `⚠️ Lỗi kết nối tới [Model: ${model} | Key: ${keyLabel}]:`,
+          err.message,
+        );
         markCooldown(model, apiKey, 30000);
       }
     }
   }
 
-  throw new Error('Tất cả các API Key và Model AI đều không phản hồi!');
+  throw new Error("Tất cả các API Key và Model AI đều không phản hồi!");
 }
 
 /**
  * Gửi tin nhắn văn bản đến AI và nhận câu trả lời
  * Tích hợp bộ nhớ bền vững (Storage) & Google Search Grounding (nếu khả dụng)
+ * Tích hợp cơ chế kiểm soát phản ứng khi bị xúc phạm (2 câu đáp lại, câu 3 gửi video, phớt lờ 15 phút)
  */
-async function askGemini(chatId, userMessage) {
+async function askGemini(
+  chatId,
+  userMessage,
+  { senderId = "", senderName = "" } = {},
+) {
+  // Lấy trạng thái xúc phạm hiện tại của người dùng
+  const insultState = await storage.getInsultState(chatId, senderId);
+  const nextTurn = Math.min(insultState.count + 1, 3);
+  const insultContext = {
+    turn: nextTurn,
+    inCooldown: insultState.inCooldown,
+    cooldownRemainingMinutes: insultState.cooldownRemainingMinutes,
+  };
+
   const history = await storage.getConversationHistory(chatId);
 
   // Thêm tin nhắn mới của người dùng
   history.push({
-    role: 'user',
-    parts: [{ text: userMessage }]
+    role: "user",
+    parts: [{ text: userMessage }],
   });
 
   // 1. Giới hạn số lượng tin nhắn gần nhất
@@ -388,12 +462,12 @@ async function askGemini(chatId, userMessage) {
   const cleanContents = [];
   for (const item of history) {
     if (cleanContents.length === 0) {
-      if (item.role === 'user') cleanContents.push(item);
+      if (item.role === "user") cleanContents.push(item);
     } else {
       const lastRole = cleanContents[cleanContents.length - 1].role;
       if (item.role !== lastRole) {
         cleanContents.push(item);
-      } else if (item.role === 'user') {
+      } else if (item.role === "user") {
         cleanContents[cleanContents.length - 1] = item;
       }
     }
@@ -401,13 +475,13 @@ async function askGemini(chatId, userMessage) {
 
   if (cleanContents.length === 0) {
     cleanContents.push({
-      role: 'user',
-      parts: [{ text: userMessage }]
+      role: "user",
+      parts: [{ text: userMessage }],
     });
   }
 
   // Tra cứu thông tin thời gian thực từ Internet nếu câu hỏi cần cập nhật
-  let webContext = '';
+  let webContext = "";
   if (config.enableGoogleSearch && shouldSearchWeb(userMessage)) {
     try {
       webContext = await searchWebRealtime(userMessage);
@@ -416,33 +490,66 @@ async function askGemini(chatId, userMessage) {
 
   const basePayload = {
     systemInstruction: {
-      parts: [{ text: getSystemInstruction(webContext) }]
+      parts: [{ text: getSystemInstruction(webContext, insultContext) }],
     },
     contents: cleanContents,
     safetySettings: SAFETY_SETTINGS,
     generationConfig: {
       temperature: 0.7,
-      maxOutputTokens: 800
-    }
+      maxOutputTokens: 800,
+    },
   };
 
   try {
-    const replyText = await executeGeminiRequest(() => basePayload);
+    let replyText = await executeGeminiRequest(() => basePayload);
+
+    // Xử lý trường hợp phớt lờ khi bị xúc phạm trong 15 phút
+    if (replyText.includes("[IGNORE]") || replyText.trim() === "[IGNORE]") {
+      console.log(
+        `🔇 [PHỚT LỜ] Tin nhắn xúc phạm từ ${senderName || senderId} bị phớt lờ (trong 15 phút cooldown).`,
+      );
+      // Xóa tin nhắn xúc phạm khỏi history để không làm lệch luồng hội thoại
+      history.pop();
+      await storage.saveConversationHistory(chatId, history);
+      return null;
+    }
+
+    // Xử lý các lượt xúc phạm có gắn thẻ <!--INSULT:X-->
+    const insultMatch = replyText.match(/<!--INSULT:(\d)-->/);
+    if (insultMatch) {
+      const detectedTurn = parseInt(insultMatch[1], 10) || nextTurn;
+      replyText = replyText.replace(/<!--INSULT:\d-->/g, "").trim();
+
+      if (detectedTurn >= 3) {
+        replyText = INSULT_VIDEO_URL;
+      }
+
+      await storage.recordInsultEvent(chatId, senderId, detectedTurn);
+      console.log(
+        `⚡ [XÚC PHẠM] Đã ghi nhận xúc phạm lần ${detectedTurn}/3 từ ${senderName || senderId}`,
+      );
+    } else if (replyText.includes(INSULT_VIDEO_URL)) {
+      // Nếu reply có chứa link video xúc phạm dù không có thẻ
+      await storage.recordInsultEvent(chatId, senderId, 3);
+      console.log(
+        `⚡ [XÚC PHẠM] Đã ghi nhận xúc phạm lần 3/3 (gửi link video) từ ${senderName || senderId}`,
+      );
+    }
 
     // Lưu phản hồi thành công vào lịch sử
     history.push({
-      role: 'model',
-      parts: [{ text: replyText }]
+      role: "model",
+      parts: [{ text: replyText }],
     });
     await storage.saveConversationHistory(chatId, history);
 
     return replyText;
   } catch (err) {
-    console.error('❌ Lỗi askGemini:', err.message);
+    console.error("❌ Lỗi askGemini:", err.message);
     // Xóa tin nhắn người dùng chưa được phản hồi để không làm lệch luồng
     history.pop();
     await storage.saveConversationHistory(chatId, history);
-    return '⚠️ Đã xảy ra lỗi khi kết nối với trí tuệ nhân tạo. Vui lòng thử lại sau ít giây!';
+    return "⚠️ Đã xảy ra lỗi khi kết nối với trí tuệ nhân tạo. Vui lòng thử lại sau ít giây!";
   }
 }
 
@@ -452,18 +559,36 @@ async function askGemini(chatId, userMessage) {
  * @param {string|number} chatId
  * @param {string} userCaption Lời nhắn gửi kèm ảnh (nếu có)
  * @param {string} photoUrl Đường dẫn ảnh do Zalo cung cấp
- * @returns {Promise<string>} Kết quả phân tích dạng text
+ * @param {object} [senderInfo]
+ * @returns {Promise<string|null>} Kết quả phân tích dạng text (hoặc null nếu phớt lờ)
  */
-async function askGeminiVision(chatId, userCaption, photoUrl) {
-  if (!photoUrl || typeof photoUrl !== 'string') {
-    console.warn('⚠️ askGeminiVision nhận được photoUrl không hợp lệ:', photoUrl);
-    return '⚠️ Không tìm thấy đường dẫn hình ảnh hợp lệ trong tin nhắn từ Zalo. Bạn vui lòng thử gửi lại ảnh nhé!';
+async function askGeminiVision(
+  chatId,
+  userCaption,
+  photoUrl,
+  { senderId = "", senderName = "" } = {},
+) {
+  if (!photoUrl || typeof photoUrl !== "string") {
+    console.warn(
+      "⚠️ askGeminiVision nhận được photoUrl không hợp lệ:",
+      photoUrl,
+    );
+    return "⚠️ Không tìm thấy đường dẫn hình ảnh hợp lệ trong tin nhắn từ Zalo. Bạn vui lòng thử gửi lại ảnh nhé!";
   }
+
+  // Lấy trạng thái xúc phạm hiện tại của người dùng
+  const insultState = await storage.getInsultState(chatId, senderId);
+  const nextTurn = Math.min(insultState.count + 1, 3);
+  const insultContext = {
+    turn: nextTurn,
+    inCooldown: insultState.inCooldown,
+    cooldownRemainingMinutes: insultState.cooldownRemainingMinutes,
+  };
 
   console.log(`🖼️ Đang tải ảnh phân tích từ Zalo: ${photoUrl.slice(0, 60)}...`);
 
-  let imageBase64 = '';
-  let mimeType = 'image/jpeg';
+  let imageBase64 = "";
+  let mimeType = "image/jpeg";
 
   try {
     const imgRes = await fetch(photoUrl);
@@ -472,65 +597,94 @@ async function askGeminiVision(chatId, userCaption, photoUrl) {
     }
 
     const arrayBuffer = await imgRes.arrayBuffer();
-    imageBase64 = Buffer.from(arrayBuffer).toString('base64');
-    const contentType = imgRes.headers.get('content-type');
+    imageBase64 = Buffer.from(arrayBuffer).toString("base64");
+    const contentType = imgRes.headers.get("content-type");
     if (contentType) {
-      mimeType = contentType.split(';')[0].trim();
+      mimeType = contentType.split(";")[0].trim();
     }
   } catch (downloadErr) {
-    console.error('❌ Lỗi tải ảnh Zalo:', downloadErr.message);
-    return '⚠️ Không thể tải hình ảnh của bạn từ máy chủ Zalo. Vui lòng thử gửi lại ảnh nhé!';
+    console.error("❌ Lỗi tải ảnh Zalo:", downloadErr.message);
+    return "⚠️ Không thể tải hình ảnh của bạn từ máy chủ Zalo. Vui lòng thử gửi lại ảnh nhé!";
   }
 
-  const cleanCaption = (userCaption || '').trim();
+  const cleanCaption = (userCaption || "").trim();
   const promptText = cleanCaption
     ? `Dựa trên hình ảnh được cung cấp, hãy tập trung giải quyết và trả lời chính xác yêu cầu sau của tôi: "${cleanCaption}". Trả lời bằng tiếng Việt tự nhiên, trực tiếp và súc tích.`
-    : 'Hãy phân tích chi tiết bức ảnh này: mô tả nội dung, trích xuất văn bản (OCR) hoặc số liệu, hóa đơn nếu có, và trả lời bằng tiếng Việt tự nhiên, rõ ràng.';
+    : "Hãy phân tích chi tiết bức ảnh này: mô tả nội dung, trích xuất văn bản (OCR) hoặc số liệu, hóa đơn nếu có, và trả lời bằng tiếng Việt tự nhiên, rõ ràng.";
 
   const payload = {
     systemInstruction: {
-      parts: [{ text: getSystemInstruction() }]
+      parts: [{ text: getSystemInstruction("", insultContext) }],
     },
     contents: [
       {
-        role: 'user',
+        role: "user",
         parts: [
           { text: promptText },
           {
             inlineData: {
               mimeType,
-              data: imageBase64
-            }
-          }
-        ]
-      }
+              data: imageBase64,
+            },
+          },
+        ],
+      },
     ],
     safetySettings: SAFETY_SETTINGS,
     generationConfig: {
       temperature: 0.4,
-      maxOutputTokens: 1000
-    }
+      maxOutputTokens: 1000,
+    },
   };
 
   try {
-    const replyText = await executeGeminiRequest(() => payload);
+    let replyText = await executeGeminiRequest(() => payload);
+
+    if (replyText.includes("[IGNORE]") || replyText.trim() === "[IGNORE]") {
+      console.log(
+        `🔇 [PHỚT LỜ] Ảnh/tin nhắn xúc phạm từ ${senderName || senderId} bị phớt lờ.`,
+      );
+      return null;
+    }
+
+    const insultMatch = replyText.match(/<!--INSULT:(\d)-->/);
+    if (insultMatch) {
+      const detectedTurn = parseInt(insultMatch[1], 10) || nextTurn;
+      replyText = replyText.replace(/<!--INSULT:\d-->/g, "").trim();
+
+      if (detectedTurn >= 3) {
+        replyText = INSULT_VIDEO_URL;
+      }
+
+      await storage.recordInsultEvent(chatId, senderId, detectedTurn);
+      console.log(
+        `⚡ [XÚC PHẠM] Đã ghi nhận xúc phạm lần ${detectedTurn}/3 từ ảnh của ${senderName || senderId}`,
+      );
+    } else if (replyText.includes(INSULT_VIDEO_URL)) {
+      await storage.recordInsultEvent(chatId, senderId, 3);
+      console.log(
+        `⚡ [XÚC PHẠM] Đã ghi nhận xúc phạm lần 3/3 từ ảnh của ${senderName || senderId}`,
+      );
+    }
 
     // Lưu vào lịch sử hội thoại dưới dạng tóm tắt để bot nhớ ngữ cảnh ở các câu tiếp theo
     const history = await storage.getConversationHistory(chatId);
     history.push({
-      role: 'user',
-      parts: [{ text: `[Người dùng đã gửi một hình ảnh] Lời nhắn: "${promptText}"` }]
+      role: "user",
+      parts: [
+        { text: `[Người dùng đã gửi một hình ảnh] Lời nhắn: "${promptText}"` },
+      ],
     });
     history.push({
-      role: 'model',
-      parts: [{ text: replyText }]
+      role: "model",
+      parts: [{ text: replyText }],
     });
     await storage.saveConversationHistory(chatId, history);
 
     return replyText;
   } catch (err) {
-    console.error('❌ Lỗi phân tích ảnh với Gemini Vision:', err.message);
-    return '⚠️ Đã xảy ra sự cố khi phân tích hình ảnh này. Bạn vui lòng thử lại bằng một ảnh rõ nét hơn nhé!';
+    console.error("❌ Lỗi phân tích ảnh với Gemini Vision:", err.message);
+    return "⚠️ Đã xảy ra sự cố khi phân tích hình ảnh này. Bạn vui lòng thử lại bằng một ảnh rõ nét hơn nhé!";
   }
 }
 
@@ -541,12 +695,12 @@ async function askGeminiVision(chatId, userCaption, photoUrl) {
  */
 async function summarizeGroupChat(messages) {
   if (!messages || messages.length === 0) {
-    return '⚠️ Chưa có dữ liệu tin nhắn thảo luận nào gần đây để tóm tắt.';
+    return "⚠️ Chưa có dữ liệu tin nhắn thảo luận nào gần đây để tóm tắt.";
   }
 
   const formattedConversation = messages
-    .map(m => `[${m.time || ''}] ${m.senderName || 'Thành viên'}: ${m.text}`)
-    .join('\n');
+    .map((m) => `[${m.time || ""}] ${m.senderName || "Thành viên"}: ${m.text}`)
+    .join("\n");
 
   const summaryPrompt = `Dưới đây là các tin nhắn thảo luận gần đây trong một nhóm chat Zalo của công ty/đội ngũ HTD Media:
 
@@ -571,25 +725,25 @@ Hãy đóng vai trò Thư ký AI chuyên nghiệp của HTD Media và lập mộ
 
   const payload = {
     systemInstruction: {
-      parts: [{ text: getSystemInstruction() }]
+      parts: [{ text: getSystemInstruction() }],
     },
     contents: [
       {
-        role: 'user',
-        parts: [{ text: summaryPrompt }]
-      }
+        role: "user",
+        parts: [{ text: summaryPrompt }],
+      },
     ],
     generationConfig: {
       temperature: 0.3,
-      maxOutputTokens: 900
-    }
+      maxOutputTokens: 900,
+    },
   };
 
   try {
     return await executeGeminiRequest(() => payload);
   } catch (err) {
-    console.error('❌ Lỗi tóm tắt thảo luận nhóm:', err.message);
-    return '⚠️ Đã xảy ra lỗi khi tạo bản tóm tắt thảo luận nhóm. Vui lòng thử lại sau!';
+    console.error("❌ Lỗi tóm tắt thảo luận nhóm:", err.message);
+    return "⚠️ Đã xảy ra lỗi khi tạo bản tóm tắt thảo luận nhóm. Vui lòng thử lại sau!";
   }
 }
 
@@ -597,44 +751,48 @@ Hãy đóng vai trò Thư ký AI chuyên nghiệp của HTD Media và lập mộ
  * Kiểm tra xem tin nhắn có mang ý định đặt nhắc hẹn không
  */
 function looksLikeReminder(text) {
-  if (!text || typeof text !== 'string') return false;
+  if (!text || typeof text !== "string") return false;
   const t = text.trim().toLowerCase();
 
   // Bỏ qua các lệnh xem danh sách nhắc hẹn
   if (
-    t === '/reminders' ||
-    t === '/reminder' ||
-    t === 'lịch hẹn' ||
-    t === 'lịch nhắc' ||
-    t.startsWith('/reminders') ||
-    t.includes('danh sách nhắc') ||
-    t.includes('danh sách lịch')
+    t === "/reminders" ||
+    t === "/reminder" ||
+    t === "lịch hẹn" ||
+    t === "lịch nhắc" ||
+    t.startsWith("/reminders") ||
+    t.includes("danh sách nhắc") ||
+    t.includes("danh sách lịch")
   ) {
     return false;
   }
 
   // Bỏ qua câu hỏi thông thường như: "nhắc lại", "đừng nhắc"
   if (
-    t.includes('nhắc lại') &&
-    (t.includes('được không') || t.includes('giúp') || t.includes('câu') || t.includes('kiến thức') || t.includes('bài'))
+    t.includes("nhắc lại") &&
+    (t.includes("được không") ||
+      t.includes("giúp") ||
+      t.includes("câu") ||
+      t.includes("kiến thức") ||
+      t.includes("bài"))
   ) {
     return false;
   }
-  if (t.includes('đừng nhắc') || t.includes('không nhắc')) {
+  if (t.includes("đừng nhắc") || t.includes("không nhắc")) {
     return false;
   }
 
   // Nhận diện mọi biến thể liên quan đến nhắc nhở / hẹn giờ / đặt lịch / báo thức
   return (
-    t.includes('nhắc') ||
-    t.includes('hẹn giờ') ||
-    t.includes('lịch hẹn') ||
-    t.includes('đặt lịch') ||
-    t.includes('tạo lịch') ||
-    t.includes('lên lịch') ||
-    t.includes('báo thức') ||
-    t.startsWith('/remind') ||
-    t.startsWith('/nhac')
+    t.includes("nhắc") ||
+    t.includes("hẹn giờ") ||
+    t.includes("lịch hẹn") ||
+    t.includes("đặt lịch") ||
+    t.includes("tạo lịch") ||
+    t.includes("lên lịch") ||
+    t.includes("báo thức") ||
+    t.startsWith("/remind") ||
+    t.startsWith("/nhac")
   );
 }
 
@@ -645,23 +803,30 @@ function tryQuickDailyReminder(text) {
   const t = text.trim();
 
   // Kiểm tra có từ khóa lặp lại hàng ngày không
-  const hasDailyKeyword = /(?:hàng ngày|hang ngay|mỗi ngày|moi ngay|ngày nào cũng|ngay nao cung|hằng ngày)/i.test(t);
+  const hasDailyKeyword =
+    /(?:hàng ngày|hang ngay|mỗi ngày|moi ngay|ngày nào cũng|ngay nao cung|hằng ngày)/i.test(
+      t,
+    );
   if (!hasDailyKeyword) return null;
 
   // Tìm mốc giờ trong câu (ví dụ: "8h", "8h30", "8:00", "8 giờ", "8 giờ 30", "8h sáng", "8h tối", "17h30")
-  const timeRegex = /(?:lúc\s*)?(\d{1,2})(?::(\d{2})|h(?:(\d{2}))?|\s*giờ(?:\s*(\d{1,2}))?)(?:\s*(sáng|chiều|tối|trưa|am|pm))?/i;
+  const timeRegex =
+    /(?:lúc\s*)?(\d{1,2})(?::(\d{2})|h(?:(\d{2}))?|\s*giờ(?:\s*(\d{1,2}))?)(?:\s*(sáng|chiều|tối|trưa|am|pm))?/i;
   const timeMatch = t.match(timeRegex);
   if (!timeMatch) return null;
 
   let hour = parseInt(timeMatch[1], 10);
-  let minute = parseInt(timeMatch[2] || timeMatch[3] || timeMatch[4] || '0', 10);
-  const period = (timeMatch[5] || '').toLowerCase();
+  let minute = parseInt(
+    timeMatch[2] || timeMatch[3] || timeMatch[4] || "0",
+    10,
+  );
+  const period = (timeMatch[5] || "").toLowerCase();
 
-  if (period === 'chiều' || period === 'tối' || period === 'pm') {
+  if (period === "chiều" || period === "tối" || period === "pm") {
     if (hour < 12) hour += 12;
-  } else if (period === 'sáng' || period === 'am') {
+  } else if (period === "sáng" || period === "am") {
     if (hour === 12) hour = 0;
-  } else if (period === 'trưa') {
+  } else if (period === "trưa") {
     if (hour < 11) hour += 12;
   }
 
@@ -669,35 +834,47 @@ function tryQuickDailyReminder(text) {
 
   // Lấy nội dung công việc bằng cách lược bỏ phần lệnh, thời gian, và từ khóa lặp lại
   let content = t
-    .replace(/(?:tạo|đặt|lên)\s*(?:lịch\s*)?(?:nhắc(?:\s+nhở|\s+hẹn)?|hẹn(?:\s+giờ)?)?/gi, '')
-    .replace(/(?:hàng ngày|hang ngay|mỗi ngày|moi ngay|ngày nào cũng|ngay nao cung|hằng ngày)/gi, '')
-    .replace(timeRegex, '')
-    .replace(/(?:nhắc(?:\s+nhở|\s+hẹn)?|hẹn(?:\s+giờ)?)\s*(?:cho\s+)?(?:tôi|em|mình|nhóm|bạn|mọi người)?/gi, '')
-    .replace(/^(?:\s*(?:về|để|lúc|vào lúc|là|:|-)\s*)+/i, '')
+    .replace(
+      /(?:tạo|đặt|lên)\s*(?:lịch\s*)?(?:nhắc(?:\s+nhở|\s+hẹn)?|hẹn(?:\s+giờ)?)?/gi,
+      "",
+    )
+    .replace(
+      /(?:hàng ngày|hang ngay|mỗi ngày|moi ngay|ngày nào cũng|ngay nao cung|hằng ngày)/gi,
+      "",
+    )
+    .replace(timeRegex, "")
+    .replace(
+      /(?:nhắc(?:\s+nhở|\s+hẹn)?|hẹn(?:\s+giờ)?)\s*(?:cho\s+)?(?:tôi|em|mình|nhóm|bạn|mọi người)?/gi,
+      "",
+    )
+    .replace(/^(?:\s*(?:về|để|lúc|vào lúc|là|:|-)\s*)+/i, "")
     .trim();
 
-  content = content.replace(/^(?:nhé|nha|ạ|đi|giùm|hộ|giúp tôi|giúp em|giúp mình)\s+/i, '').trim();
-  content = content.replace(/\s+(?:nhé|nha|ạ|nhé bot|nha bot)$/i, '').trim();
-  if (!content) content = 'Công việc hàng ngày';
+  content = content
+    .replace(/^(?:nhé|nha|ạ|đi|giùm|hộ|giúp tôi|giúp em|giúp mình)\s+/i, "")
+    .trim();
+  content = content.replace(/\s+(?:nhé|nha|ạ|nhé bot|nha bot)$/i, "").trim();
+  if (!content) content = "Công việc hàng ngày";
 
   // Tính toán thời điểm kế tiếp theo giờ VN (GMT+7)
   const now = new Date();
-  const vnParts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'Asia/Ho_Chi_Minh',
-    year: 'numeric',
-    month: 'numeric',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: 'numeric',
-    hour12: false
+  const vnParts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Ho_Chi_Minh",
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    hour: "numeric",
+    minute: "numeric",
+    hour12: false,
   }).formatToParts(now);
 
-  const getPart = type => parseInt(vnParts.find(p => p.type === type).value, 10);
-  const curYear = getPart('year');
-  const curMonth = getPart('month') - 1;
-  const curDay = getPart('day');
-  const curHour = getPart('hour');
-  const curMin = getPart('minute');
+  const getPart = (type) =>
+    parseInt(vnParts.find((p) => p.type === type).value, 10);
+  const curYear = getPart("year");
+  const curMonth = getPart("month") - 1;
+  const curDay = getPart("day");
+  const curHour = getPart("hour");
+  const curMin = getPart("minute");
 
   let targetDay = curDay;
   if (hour < curHour || (hour === curHour && minute <= curMin)) {
@@ -705,18 +882,18 @@ function tryQuickDailyReminder(text) {
   }
 
   const remindAt = Date.UTC(curYear, curMonth, targetDay, hour - 7, minute, 0);
-  const hourStr = String(hour).padStart(2, '0');
-  const minStr = String(minute).padStart(2, '0');
+  const hourStr = String(hour).padStart(2, "0");
+  const minStr = String(minute).padStart(2, "0");
   const timeFormatted = `${hourStr}:${minStr}`;
 
   return {
     isReminder: true,
     content,
     remindAt,
-    repeat: 'daily',
+    repeat: "daily",
     targetTime: `${hourStr}:${minStr}`,
     timeFormatted: `${timeFormatted} mỗi ngày`,
-    confirmationMessage: `⏰ **Đã ghi nhận lịch nhắc lặp lại hàng ngày thành công!**\n\n📌 **Nội dung:** ${content}\n🕒 **Thời gian nhắc:** ${timeFormatted} mỗi ngày\n🔁 **Chu kỳ:** Hàng ngày (lặp lại tự động mỗi ngày)\n\n_💡 Để xem danh sách gõ /reminders hoặc hủy lịch gõ /xoanhac._`
+    confirmationMessage: `⏰ **Đã ghi nhận lịch nhắc lặp lại hàng ngày thành công!**\n\n📌 **Nội dung:** ${content}\n🕒 **Thời gian nhắc:** ${timeFormatted} mỗi ngày\n🔁 **Chu kỳ:** Hàng ngày (lặp lại tự động mỗi ngày)\n\n_💡 Để xem danh sách gõ /reminders hoặc hủy lịch gõ /xoanhac._`,
   };
 }
 
@@ -732,40 +909,46 @@ function tryQuickRegexReminder(text) {
 
   // Mẫu 1: [tạo/đặt/lên lịch] [nhắc/hẹn] [tôi/em/mình/nhóm/bạn] [sau] X phút/giờ/tiếng [nữa] [nội dung]
   // Ví dụ: "tạo lịch nhắc 15 phút nữa uống nước", "nhắc tôi sau 1 giờ họp", "nhắc 10 phút nữa tắt bếp"
-  let match = t.match(/(?:(?:tạo|đặt|lên)\s*(?:lịch\s*)?)?(?:nhắc(?:\s+nhở|\s+hẹn)?|hẹn(?:\s+giờ)?)\s*(?:cho\s+)?(?:tôi|em|mình|nhóm|bạn)?\s*(?:sau\s*)?(\d+)\s*(phút|giờ|tiếng|giây)\s*(?:nữa)?(?:\s+là|\s*:|\s+về|\s+để)?\s*(.*)/i);
+  let match = t.match(
+    /(?:(?:tạo|đặt|lên)\s*(?:lịch\s*)?)?(?:nhắc(?:\s+nhở|\s+hẹn)?|hẹn(?:\s+giờ)?)\s*(?:cho\s+)?(?:tôi|em|mình|nhóm|bạn)?\s*(?:sau\s*)?(\d+)\s*(phút|giờ|tiếng|giây)\s*(?:nữa)?(?:\s+là|\s*:|\s+về|\s+để)?\s*(.*)/i,
+  );
 
   // Mẫu 2: sau X phút/giờ/tiếng [nữa] nhắc [tôi/em/mình/nhóm/bạn] [nội dung]
   if (!match) {
-    match = t.match(/sau\s*(\d+)\s*(phút|giờ|tiếng|giây)\s*(?:nữa)?\s*(?:hãy\s*)?nhắc(?:\s+nhở|\s+hẹn)?\s*(?:cho\s+)?(?:tôi|em|mình|nhóm|bạn)?(?:\s+là|\s*:|\s+về|\s+để)?\s*(.*)/i);
+    match = t.match(
+      /sau\s*(\d+)\s*(phút|giờ|tiếng|giây)\s*(?:nữa)?\s*(?:hãy\s*)?nhắc(?:\s+nhở|\s+hẹn)?\s*(?:cho\s+)?(?:tôi|em|mình|nhóm|bạn)?(?:\s+là|\s*:|\s+về|\s+để)?\s*(.*)/i,
+    );
   }
 
   if (match) {
     const num = parseInt(match[1], 10);
     const unit = match[2].toLowerCase();
-    let content = match[3] ? match[3].trim() : '';
+    let content = match[3] ? match[3].trim() : "";
     // Lược bỏ các từ thừa ở đầu nội dung như "nhé", "nha", "ạ", "đi", "giúp", "hộ", "giùm"
-    content = content.replace(/^(?:nhé|nha|ạ|đi|giùm|hộ|giúp tôi|giúp em|giúp mình)\s+/i, '').trim();
-    if (!content) content = 'Công việc đã lên lịch';
+    content = content
+      .replace(/^(?:nhé|nha|ạ|đi|giùm|hộ|giúp tôi|giúp em|giúp mình)\s+/i, "")
+      .trim();
+    if (!content) content = "Công việc đã lên lịch";
 
     let ms = 0;
-    if (unit === 'phút') ms = num * 60 * 1000;
-    else if (unit === 'giờ' || unit === 'tiếng') ms = num * 3600 * 1000;
-    else if (unit === 'giây') ms = num * 1000;
+    if (unit === "phút") ms = num * 60 * 1000;
+    else if (unit === "giờ" || unit === "tiếng") ms = num * 3600 * 1000;
+    else if (unit === "giây") ms = num * 1000;
 
     if (ms > 0) {
       const remindAt = Date.now() + ms;
-      const timeStr = new Date(remindAt).toLocaleTimeString('vi-VN', {
-        hour: '2-digit',
-        minute: '2-digit',
-        timeZone: 'Asia/Ho_Chi_Minh'
+      const timeStr = new Date(remindAt).toLocaleTimeString("vi-VN", {
+        hour: "2-digit",
+        minute: "2-digit",
+        timeZone: "Asia/Ho_Chi_Minh",
       });
       return {
         isReminder: true,
         content,
         remindAt,
-        repeat: 'none',
+        repeat: "none",
         timeFormatted: `${timeStr} (sau ${num} ${unit})`,
-        confirmationMessage: `⏰ **Đã ghi nhận nhắc hẹn thành công!**\n\n📌 **Nội dung:** ${content}\n🕒 **Thời gian nhắc:** ${timeStr} (sau ${num} ${unit})\n\n_Bot HTD Media sẽ chủ động nhắn tin Zalo cho bạn khi đến giờ!_`
+        confirmationMessage: `⏰ **Đã ghi nhận nhắc hẹn thành công!**\n\n📌 **Nội dung:** ${content}\n🕒 **Thời gian nhắc:** ${timeStr} (sau ${num} ${unit})\n\n_Bot HTD Media sẽ chủ động nhắn tin Zalo cho bạn khi đến giờ!_`,
       };
     }
   }
@@ -790,7 +973,7 @@ async function parseReminderIntent(userMessage) {
 
   // 2. Dùng Gemini AI phân tích câu nói tự nhiên phức tạp
   const now = new Date();
-  const nowStr = now.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
+  const nowStr = now.toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" });
   const prompt = `Thời điểm hiện tại tại Việt Nam (GMT+7) là: ${nowStr} (Timestamp ms: ${now.getTime()}).
 Người dùng gửi tin nhắn: "${userMessage}"
 
@@ -817,37 +1000,47 @@ CHỈ trả về một JSON object duy nhất:
 }`;
 
   const payload = {
-    contents: [{ role: 'user', parts: [{ text: prompt }] }],
+    contents: [{ role: "user", parts: [{ text: prompt }] }],
     safetySettings: SAFETY_SETTINGS,
     generationConfig: {
       temperature: 0.1,
-      responseMimeType: 'application/json'
-    }
+      responseMimeType: "application/json",
+    },
   };
 
   try {
     const rawJson = await executeGeminiRequest(() => payload);
     const parsed = JSON.parse(rawJson);
-    if (parsed && parsed.isReminder && parsed.targetTimestamp && Number(parsed.targetTimestamp) > Date.now()) {
-      const repeat = (parsed.repeat === 'daily' || parsed.repeat === 'weekly') ? parsed.repeat : 'none';
+    if (
+      parsed &&
+      parsed.isReminder &&
+      parsed.targetTimestamp &&
+      Number(parsed.targetTimestamp) > Date.now()
+    ) {
+      const repeat =
+        parsed.repeat === "daily" || parsed.repeat === "weekly"
+          ? parsed.repeat
+          : "none";
       let confirmationMessage = parsed.confirmationMessage;
-      if (repeat === 'daily') {
-        confirmationMessage = `⏰ **Đã ghi nhận lịch nhắc lặp lại hàng ngày thành công!**\n\n📌 **Nội dung:** ${parsed.content}\n🕒 **Thời gian nhắc:** ${parsed.formattedTime || 'Hàng ngày'}\n🔁 **Chu kỳ:** Hàng ngày (lặp lại tự động mỗi ngày)\n\n_💡 Để xem danh sách gõ /reminders hoặc hủy lịch gõ /xoanhac._`;
-      } else if (repeat === 'weekly') {
-        confirmationMessage = `⏰ **Đã ghi nhận lịch nhắc lặp lại hàng tuần thành công!**\n\n📌 **Nội dung:** ${parsed.content}\n🕒 **Thời gian nhắc:** ${parsed.formattedTime || 'Hàng tuần'}\n🔁 **Chu kỳ:** Hàng tuần\n\n_💡 Để xem danh sách gõ /reminders hoặc hủy lịch gõ /xoanhac._`;
+      if (repeat === "daily") {
+        confirmationMessage = `⏰ **Đã ghi nhận lịch nhắc lặp lại hàng ngày thành công!**\n\n📌 **Nội dung:** ${parsed.content}\n🕒 **Thời gian nhắc:** ${parsed.formattedTime || "Hàng ngày"}\n🔁 **Chu kỳ:** Hàng ngày (lặp lại tự động mỗi ngày)\n\n_💡 Để xem danh sách gõ /reminders hoặc hủy lịch gõ /xoanhac._`;
+      } else if (repeat === "weekly") {
+        confirmationMessage = `⏰ **Đã ghi nhận lịch nhắc lặp lại hàng tuần thành công!**\n\n📌 **Nội dung:** ${parsed.content}\n🕒 **Thời gian nhắc:** ${parsed.formattedTime || "Hàng tuần"}\n🔁 **Chu kỳ:** Hàng tuần\n\n_💡 Để xem danh sách gõ /reminders hoặc hủy lịch gõ /xoanhac._`;
       }
 
       return {
         isReminder: true,
-        content: parsed.content || 'Công việc đã lên lịch',
+        content: parsed.content || "Công việc đã lên lịch",
         remindAt: Number(parsed.targetTimestamp),
         repeat,
-        timeFormatted: parsed.formattedTime || 'Thời gian đã hẹn',
-        confirmationMessage: confirmationMessage || `⏰ **Đã đặt nhắc hẹn:** "${parsed.content}" lúc ${parsed.formattedTime}!`
+        timeFormatted: parsed.formattedTime || "Thời gian đã hẹn",
+        confirmationMessage:
+          confirmationMessage ||
+          `⏰ **Đã đặt nhắc hẹn:** "${parsed.content}" lúc ${parsed.formattedTime}!`,
       };
     }
   } catch (err) {
-    console.warn('⚠️ Gemini parse reminder intent failed:', err.message);
+    console.warn("⚠️ Gemini parse reminder intent failed:", err.message);
   }
 
   return { isReminder: false };
@@ -859,5 +1052,5 @@ module.exports = {
   summarizeGroupChat,
   parseReminderIntent,
   clearHistory,
-  searchWebRealtime
+  searchWebRealtime,
 };

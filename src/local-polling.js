@@ -190,8 +190,12 @@ async function handleMessage(eventData) {
 
     try {
       console.log("🤖 Đang gửi ảnh sang Gemini Multimodal Vision...");
-      const aiReply = await askGeminiVision(chatId, caption, photoUrl);
+      const aiReply = await askGeminiVision(chatId, caption, photoUrl, { senderId, senderName });
       clearInterval(typingTimer);
+      if (!aiReply || aiReply === '[IGNORE]' || aiReply.trim() === '') {
+        console.log(`🔇 [PHỚT LỜ] Bot phớt lờ ảnh/tin nhắn xúc phạm từ ${senderName} (${senderId})`);
+        return;
+      }
 
       await sendMessage(chatId, aiReply, "markdown");
       console.log(`✅ Đã gửi phân tích ảnh thành công tới ${senderName}`);
@@ -724,8 +728,12 @@ async function handleMessage(eventData) {
 
   try {
     console.log(`🤖 Đang xử lý câu trả lời AI...`);
-    const aiReply = await askGemini(chatId, rawText);
+    const aiReply = await askGemini(chatId, rawText, { senderId, senderName });
     clearInterval(typingTimer);
+    if (!aiReply || aiReply === '[IGNORE]' || aiReply.trim() === '') {
+      console.log(`🔇 [PHỚT LỜ] Bot phớt lờ tin nhắn xúc phạm từ ${senderName} (${senderId})`);
+      return;
+    }
 
     // Gửi phản hồi lại cho người dùng qua Zalo
     await sendMessage(chatId, aiReply, "markdown");
