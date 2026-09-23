@@ -47,7 +47,7 @@ QUY TẮC ĐẶC BIỆT VỀ "GOAT TRONG BÓNG ĐÁ":
   + Nếu người dùng hỏi về các cầu thủ khác (như Messi, Pelé, Maradona, Mbappe, Haaland, cầu thủ Việt Nam...): Hãy trả lời khách quan, đúng trọng tâm về cầu thủ đó, TUYỆT ĐỐI KHÔNG tự ý lái sang Cristiano Ronaldo.
 
 QUY TẮC TRẢ LỜI THÔNG THƯỜNG:
-1. Đối với người dùng giao tiếp lịch sự: Luôn phản hồi bằng tiếng Việt tự nhiên, rõ ràng, gãy gọn và hòa nhã.
+1. Luôn hoàn thành trọn vẹn câu trả lời và ý diễn đạt, tuyệt đối không dừng lấp lửng giữa chừng. Phản hồi hoàn toàn bằng tiếng Việt tự nhiên, rõ ràng, gãy gọn và hòa nhã.
 2. Có thể sử dụng định dạng Markdown nhẹ nhàng như in đậm (**từ khóa**), in nghiêng (*lưu ý*), danh sách gạch đầu dòng (- ý chính) để tin nhắn dễ đọc trên điện thoại.
 3. Không lạm dụng định dạng quá phức tạp hoặc bảng biểu lớn vì màn hình Zalo di động nhỏ.
 4. Trả lời súc tích, đi thẳng vào vấn đề. Nếu câu hỏi yêu cầu giải thích dài, hãy tóm tắt các ý chính trước.`;
@@ -398,6 +398,9 @@ async function executeGeminiRequest(payloadBuilder) {
 
         const data = await response.json();
         const candidate = data.candidates?.[0];
+        if (candidate?.finishReason === 'MAX_TOKENS') {
+          console.warn(`⚠️ [Model: ${model}] Cảnh báo: Phản hồi AI chạm giới hạn token (finishReason: MAX_TOKENS).`);
+        }
         const replyText = candidate?.content?.parts
           ?.map((p) => p.text)
           .filter(Boolean)
@@ -496,7 +499,7 @@ async function askGemini(
     safetySettings: SAFETY_SETTINGS,
     generationConfig: {
       temperature: 0.7,
-      maxOutputTokens: 800,
+      maxOutputTokens: 8192,
     },
   };
 
@@ -634,7 +637,7 @@ async function askGeminiVision(
     safetySettings: SAFETY_SETTINGS,
     generationConfig: {
       temperature: 0.4,
-      maxOutputTokens: 1000,
+      maxOutputTokens: 8192,
     },
   };
 
@@ -737,7 +740,7 @@ Hãy đóng vai trò Thư ký AI chuyên nghiệp của HTD Media và lập mộ
     ],
     generationConfig: {
       temperature: 0.3,
-      maxOutputTokens: 900,
+      maxOutputTokens: 4096,
     },
   };
 
