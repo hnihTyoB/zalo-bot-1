@@ -114,8 +114,7 @@ async function handleMessage(eventData) {
 
       const isIdCmd =
         /(?:^|\s)\/(?:id|myid|whois|groupid)(?:\s|$)/i.test(rawCheckText) ||
-        /(?:^|\s)\/(?:id|myid|whois|groupid)(?:\s|$)/i.test(cleanCheckText) ||
-        /^(?:xem\s+id|lấy\s+id|id\s+nhóm|chat\s+id|groupid|myid|id)$/i.test(cleanCheckText);
+        /(?:^|\s)\/(?:id|myid|whois|groupid)(?:\s|$)/i.test(cleanCheckText);
 
       const isGroupAdminCmd =
         /(?:^|\s)\/(?:allowgroup|addgroup|disallowgroup|removegroup|delgroup|grouplist|allowedgroups)(?:\s|$)/i.test(rawCheckText) ||
