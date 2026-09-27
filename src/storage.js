@@ -434,6 +434,160 @@ async function isUserBlocked(userId) {
   return blockedList.some(u => (typeof u === 'string' ? u : u.id) === idStr);
 }
 
+// ==========================================
+// QUẢN LÝ DANH SÁCH NHÓM ĐƯỢC PHÉP (ALLOWED GROUPS)
+// ==========================================
+const REDIS_ALLOWED_GROUPS_KEY = 'zalo:allowed_groups:list';
+let memoryAllowedGroups = [];
+
+/**
+ * Lấy danh sách nhóm được phép hoạt động (kết hợp .env và Redis)
+ * @returns {Promise<Array<{ id: string, name?: string, addedBy?: string, addedAt?: number, source: string }>>}
+ */
+async function getAllowedGroups() {
+  let redisGroups = [];
+  if (config.upstashRedisRestUrl && config.upstashRedisRestToken) {
+    const raw = await callRedisCommand('GET', REDIS_ALLOWED_GROUPS_KEY);
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) redisGroups = parsed;
+      } catch (e) {}
+    }
+  } else {
+    redisGroups = memoryAllowedGroups;
+  }
+
+  const allMap = new Map();
+  // 1. Nhóm cấu hình tĩnh trong .env
+  if (Array.isArray(config.allowedGroupIds)) {
+    for (const gid of config.allowedGroupIds) {
+      if (gid) {
+        allMap.set(String(gid), {
+          id: String(gid),
+          name: '',
+          addedBy: 'Hệ thống (.env)',
+          addedAt: null,
+          source: 'env'
+        });
+      }
+    }
+  }
+
+  // 2. Nhóm cấu hình động lưu trên Redis
+  for (const g of redisGroups) {
+    const gid = typeof g === 'string' ? g : g.id;
+    if (gid) {
+      const existing = allMap.get(String(gid));
+      allMap.set(String(gid), {
+        id: String(gid),
+        name: typeof g === 'object' && g.name ? g.name : existing?.name || '',
+        addedBy: typeof g === 'object' && g.addedBy ? g.addedBy : existing?.addedBy || '',
+        addedAt: typeof g === 'object' && g.addedAt ? g.addedAt : existing?.addedAt || null,
+        source: existing ? 'env+redis' : 'redis'
+      });
+    }
+  }
+
+  return Array.from(allMap.values());
+}
+
+/**
+ * Thêm nhóm vào danh sách được phép hoạt động
+ * @param {string} groupId
+ * @param {string} [groupName]
+ * @param {string} [addedBy]
+ * @returns {Promise<boolean>}
+ */
+async function addAllowedGroup(groupId, groupName = '', addedBy = '') {
+  const gidStr = String(groupId).trim();
+  if (!gidStr) return false;
+
+  let current = [];
+  if (config.upstashRedisRestUrl && config.upstashRedisRestToken) {
+    const raw = await callRedisCommand('GET', REDIS_ALLOWED_GROUPS_KEY);
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) current = parsed;
+      } catch (e) {}
+    }
+  } else {
+    current = memoryAllowedGroups;
+  }
+
+  if (!current.some(g => (typeof g === 'string' ? g : g.id) === gidStr)) {
+    current.push({
+      id: gidStr,
+      name: groupName,
+      addedBy,
+      addedAt: Date.now()
+    });
+    memoryAllowedGroups = current;
+    if (config.upstashRedisRestUrl && config.upstashRedisRestToken) {
+      await callRedisCommand('SET', REDIS_ALLOWED_GROUPS_KEY, JSON.stringify(current));
+    }
+  }
+
+  // Cập nhật runtime config.allowedGroupIds
+  if (Array.isArray(config.allowedGroupIds) && !config.allowedGroupIds.includes(gidStr)) {
+    config.allowedGroupIds.push(gidStr);
+  }
+
+  return true;
+}
+
+/**
+ * Xóa nhóm khỏi danh sách được phép hoạt động
+ * @param {string} groupId
+ * @returns {Promise<boolean>}
+ */
+async function removeAllowedGroup(groupId) {
+  const gidStr = String(groupId).trim();
+  if (!gidStr) return false;
+
+  let current = [];
+  if (config.upstashRedisRestUrl && config.upstashRedisRestToken) {
+    const raw = await callRedisCommand('GET', REDIS_ALLOWED_GROUPS_KEY);
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) current = parsed;
+      } catch (e) {}
+    }
+  } else {
+    current = memoryAllowedGroups;
+  }
+
+  const filtered = current.filter(g => (typeof g === 'string' ? g : g.id) !== gidStr);
+  memoryAllowedGroups = filtered;
+  if (config.upstashRedisRestUrl && config.upstashRedisRestToken) {
+    await callRedisCommand('SET', REDIS_ALLOWED_GROUPS_KEY, JSON.stringify(filtered));
+  }
+
+  if (Array.isArray(config.allowedGroupIds)) {
+    config.allowedGroupIds = config.allowedGroupIds.filter(id => id !== gidStr);
+  }
+
+  return true;
+}
+
+/**
+ * Kiểm tra xem nhóm có được phép hoạt động không
+ * @param {string} groupId
+ * @returns {Promise<boolean>}
+ */
+async function isGroupAllowed(groupId) {
+  const gidStr = String(groupId).trim();
+  if (!gidStr) return false;
+
+  const all = await getAllowedGroups();
+  // Nếu cả .env và Redis đều chưa cấu hình nhóm nào -> Bot cho phép mọi nhóm
+  if (all.length === 0) return true;
+
+  return all.some(g => g.id === gidStr);
+}
+
 /**
  * Lưu URL ảnh gần nhất của cuộc trò chuyện (để hỗ trợ người dùng reply ảnh hoặc hỏi sau khi gửi ảnh)
  * @param {string|number} chatId
@@ -606,6 +760,10 @@ module.exports = {
   addBlockedUser,
   removeBlockedUser,
   isUserBlocked,
+  getAllowedGroups,
+  addAllowedGroup,
+  removeAllowedGroup,
+  isGroupAllowed,
   setLastImageUrl,
   getLastImageUrl,
   getInsultState,

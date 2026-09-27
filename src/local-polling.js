@@ -38,7 +38,13 @@ Tôi là trợ lý AI thông minh của HTD Media, luôn sẵn sàng hỗ trợ 
 - \`/reminders\` : Xem danh sách các lịch nhắc hẹn đang chờ.
 - \`/xoanhac <STT>\` : (Quản trị viên) Hủy lịch nhắc hẹn theo số thứ tự (ví dụ: \`/xoanhac 1\` hoặc \`/xoanhac all\`).
 - \`/id\` : Xem Zalo ID của bạn (hoặc reply tin nhắn của người khác kèm \`/id\` để xem ID của họ).
+- \`/groupid\` : Xem Chat ID của nhóm chat hiện tại và trạng thái cấp phép.
 - \`/stk\` : Xem thông tin tài khoản ngân hàng và mã QR chuyển khoản.
+
+🛡️ **Quản Trị Nhóm (Dành riêng cho Quản trị viên):**
+- \`/allowgroup\` : Cấp phép cho nhóm hiện tại hoạt động (hoặc \`/allowgroup <Chat_ID>\`).
+- \`/disallowgroup\` : Hủy cấp phép nhóm hiện tại (hoặc \`/disallowgroup <Chat_ID>\`).
+- \`/grouplist\` : Xem danh sách các nhóm chat đã được cấp phép.
 
 ⏰ **Tạo Nhắc Hẹn Tự Động (Dành riêng cho Quản trị viên):**
 - Quản trị viên chỉ cần nói câu bình thường:
@@ -97,23 +103,63 @@ async function handleMessage(eventData) {
     return;
   }
 
-  // KIỂM TRA QUYỀN TRUY CẬP CHO NHÓM CHAT (ALLOWED_GROUP_IDS):
-  if (chatType === "GROUP" && config.allowedGroupIds.length > 0) {
-    const isAllowed = config.allowedGroupIds.includes(String(chatId));
+  // KIỂM TRA QUYỀN TRUY CẬP CHO NHÓM CHAT (ALLOWED_GROUP_IDS & REDIS DYNAMIC WHITELIST):
+  if (chatType === "GROUP") {
+    const isAllowed = await storage.isGroupAllowed(chatId);
     if (!isAllowed) {
-      const text = (msg.text || msg.caption || "").trim();
-      if (/^\/(?:id|myid|whois)(?:\s|$)/i.test(text)) {
-        await sendMessage(
-          chatId,
-          `⚠️ **Nhóm này chưa được cấp phép cho Bot hoạt động!**\n\n🔑 **Chat ID của nhóm:** \`${chatId}\`\n💬 **Loại cuộc trò chuyện:** Group\n\n_💡 Hãy copy Chat ID này và thêm vào biến \`ALLOWED_GROUP_IDS\` trong file \`.env\` để kích hoạt Bot trong nhóm này._`,
-          "markdown",
-        );
+      const rawCheckText = (msg.text || msg.caption || "").trim();
+      const cleanCheckText = rawCheckText
+        .replace(/@?(?:Bot\s*HTD\s*Media|Bot|HTD\s*Media)\b/gi, "")
+        .trim();
+
+      const isIdCmd =
+        /(?:^|\s)\/(?:id|myid|whois|groupid)(?:\s|$)/i.test(rawCheckText) ||
+        /(?:^|\s)\/(?:id|myid|whois|groupid)(?:\s|$)/i.test(cleanCheckText) ||
+        /^(?:xem\s+id|lấy\s+id|id\s+nhóm|chat\s+id|groupid|myid|id)$/i.test(cleanCheckText);
+
+      const isGroupAdminCmd =
+        /(?:^|\s)\/(?:allowgroup|addgroup|disallowgroup|removegroup|delgroup|grouplist|allowedgroups)(?:\s|$)/i.test(rawCheckText) ||
+        /(?:^|\s)\/(?:allowgroup|addgroup|disallowgroup|removegroup|delgroup|grouplist|allowedgroups)(?:\s|$)/i.test(cleanCheckText);
+
+      if (isIdCmd) {
+        const reply = [
+          "{big}{green}🆔 THÔNG TIN NHÓM CHAT{/green}{/big}",
+          "",
+          `🔑 **Chat ID của nhóm:** \`${chatId}\``,
+          `💬 **Loại cuộc trò chuyện:** Group (Nhóm Zalo)`,
+          `🛡️ **Trạng thái:** ⚠️ Nhóm này chưa được cấp phép hoạt động`,
+          "",
+          "💡 **CÁCH KÍCH HOẠT CHO BOT HOẠT ĐỘNG TRONG NHÓM NÀY:**",
+          ...(isAdmin
+            ? [
+                "• **Cách 1 (Nhanh nhất - Kích hoạt tức thì):**",
+                `  Gõ ngay lệnh sau trong nhóm này: 👉 \`/allowgroup\``,
+                `  _(Bot sẽ tự động lưu vào Redis và kích hoạt ngay mà không cần sửa file hay redeploy!)_`,
+                "",
+                "• **Cách 2 (Cấu hình file .env):**",
+                `  Thêm Chat ID \`${chatId}\` vào biến \`ALLOWED_GROUP_IDS\` trong file \`.env\` (phân tách bằng dấu phẩy nếu nhiều nhóm).`
+              ]
+            : [
+                "• **Cách 1 (Nhanh nhất):** Nhờ Quản trị viên (@Admin) gõ lệnh sau ngay trong nhóm này:",
+                `  👉 \`/allowgroup\``,
+                "",
+                "• **Cách 2:** Copy Chat ID \`${chatId}\` gửi cho Quản trị viên để thêm vào biến \`ALLOWED_GROUP_IDS\` trong file \`.env\` (phân tách bằng dấu phẩy)."
+              ])
+        ].join("\n");
+
+        await sendMessage(chatId, reply, "markdown");
+        return;
+      }
+
+      // Nếu là Admin gõ lệnh quản trị nhóm (/allowgroup, /addgroup...) -> Cho phép đi tiếp xuống phần xử lý lệnh
+      if (isAdmin && isGroupAdminCmd) {
+        // Tiếp tục xuống dưới để xử lý lệnh Admin
       } else {
         console.log(
           `🚫 [GROUP CHƯA CẤP PHÉP] Bỏ qua tin nhắn từ nhóm "${chatId}" (không nằm trong ALLOWED_GROUP_IDS).`,
         );
+        return;
       }
-      return;
     }
   }
 
@@ -550,10 +596,10 @@ async function handleMessage(eventData) {
     return;
   }
 
-  // 4. Nhận diện lệnh quản trị (/id, /myid, /whois, /block, /unblock, /blocklist)
+  // 4. Nhận diện lệnh quản trị (/id, /myid, /whois, /groupid, /block, /unblock, /blocklist, /allowgroup, /addgroup, /disallowgroup, /removegroup, /delgroup, /grouplist, /allowedgroups)
   // Hỗ trợ cả khi Zalo tự chèn "@Tên" lúc bấm Reply hoặc khi mention đồng thời @Tên @Bot HTD Media /block
   const cmdMatch = rawText.match(
-    /(?:^|\s)\/(id|myid|whois|blocklist|block|unblock)(?:\s+(.*))?$/i,
+    /(?:^|\s)\/(id|myid|whois|groupid|blocklist|block|unblock|allowgroup|addgroup|disallowgroup|removegroup|delgroup|grouplist|allowedgroups)(?:\s+(.*))?$/i,
   );
   const matchedCmd = cmdMatch ? "/" + cmdMatch[1].toLowerCase() : null;
   const cmdParam = cmdMatch && cmdMatch[2] ? cmdMatch[2].trim() : "";
@@ -588,8 +634,47 @@ async function handleMessage(eventData) {
   if (
     matchedCmd === "/id" ||
     matchedCmd === "/myid" ||
-    matchedCmd === "/whois"
+    matchedCmd === "/whois" ||
+    matchedCmd === "/groupid"
   ) {
+    if (matchedCmd === "/groupid") {
+      if (chatType !== "GROUP") {
+        await sendMessage(
+          chatId,
+          `💡 Lệnh \`/groupid\` dùng trong Nhóm Chat để xem ID nhóm. ID cá nhân của bạn là: \`${senderId}\``,
+        );
+        return;
+      }
+      const isAllowed = await storage.isGroupAllowed(chatId);
+      const reply = [
+        "{big}{green}🆔 THÔNG TIN NHÓM CHAT{/green}{/big}",
+        "",
+        `🔑 **Chat ID của nhóm:** \`${chatId}\``,
+        `💬 **Loại cuộc trò chuyện:** Group (Nhóm Zalo)`,
+        `🛡️ **Trạng thái:** ${isAllowed ? "✅ Đã cấp phép hoạt động" : "⚠️ Chưa được cấp phép"}`,
+        isAdmin
+          ? "⭐ **Quyền hạn của bạn:** Quản trị viên (Admin)"
+          : "👥 **Quyền hạn của bạn:** Thành viên",
+        "",
+        ...(isAllowed
+          ? ["_💡 Nhóm này đã được cấp phép, Bot sẵn sàng phục vụ tất cả thành viên!_"]
+          : [
+              "💡 **CÁCH CẤP PHÉP HOẠT ĐỘNG:**",
+              ...(isAdmin
+                ? [
+                    "• Gõ ngay: `/allowgroup` trong nhóm này để cấp phép tức thì.",
+                    `• Hoặc thêm \`${chatId}\` vào \`ALLOWED_GROUP_IDS\` trong file \`.env\`.`
+                  ]
+                : [
+                    "• Nhờ Quản trị viên (@Admin) gõ `/allowgroup` ngay trong nhóm này.",
+                    `• Hoặc gửi Chat ID \`${chatId}\` cho Quản trị viên để thêm vào file \`.env\`.`
+                  ])
+            ])
+      ].join("\n");
+      await sendMessage(chatId, reply, "markdown");
+      return;
+    }
+
     if (targetId) {
       const isTargetAdmin = config.adminUserIds.includes(targetId);
       const isTargetBlocked = await storage.isUserBlocked(targetId);
@@ -612,16 +697,16 @@ async function handleMessage(eventData) {
       return;
     }
 
+    const isGrpAllowed = chatType === "GROUP" ? await storage.isGroupAllowed(chatId) : false;
     const groupStatusLine =
       chatType === "GROUP"
-        ? config.allowedGroupIds.length === 0 ||
-          config.allowedGroupIds.includes(String(chatId))
+        ? isGrpAllowed
           ? "🛡️ **Trạng thái nhóm:** ✅ Đã cấp phép hoạt động"
-          : "🛡️ **Trạng thái nhóm:** ⚠️ Chưa nằm trong ALLOWED_GROUP_IDS"
+          : "🛡️ **Trạng thái nhóm:** ⚠️ Chưa được cấp phép"
         : null;
 
     const reply = [
-      "{big}{green}🆔 THÔNG TIN TÀI KHOẢN CỦA BẠN{/green}{/big}",
+      "{big}{green}🆔 THÔNG TIN TÀI KHOẢN VÀ NHÓM CHAT{/green}{/big}",
       "",
       `👤 **Họ tên:** ${senderName}`,
       `🔑 **Zalo User ID:** \`${senderId}\``,
@@ -631,7 +716,9 @@ async function handleMessage(eventData) {
         ? "⭐ **Quyền hạn:** Quản trị viên (Admin)"
         : "👥 **Quyền hạn:** Thành viên",
       "",
-      "_💡 Dùng ID này để cấu hình quyền Admin hoặc phân quyền trong file .env._",
+      chatType === "GROUP"
+        ? "_💡 Dùng Chat ID này để cấp phép nhóm qua lệnh `/allowgroup` hoặc biến ALLOWED_GROUP_IDS trong file .env._"
+        : "_💡 Dùng ID này để cấu hình quyền Admin hoặc phân quyền trong file .env._",
     ].join("\n");
     await sendMessage(chatId, reply, "markdown");
     return;
@@ -715,6 +802,117 @@ async function handleMessage(eventData) {
         chatId,
         `🚫 **Đã đưa vào danh sách chặn thành công!**\n\n👤 **Tên:** ${targetName || "Người dùng"}\n🔑 **ID:** \`${targetId}\`\n\n_Từ giờ Bot sẽ hoàn toàn phớt lờ mọi tin nhắn từ người này._`,
       );
+      return;
+    }
+  }
+
+  // 4.3 Lệnh quản trị danh sách nhóm: /allowgroup, /addgroup, /disallowgroup, /removegroup, /delgroup, /grouplist, /allowedgroups (Chỉ Admin)
+  if (
+    matchedCmd === "/allowgroup" ||
+    matchedCmd === "/addgroup" ||
+    matchedCmd === "/disallowgroup" ||
+    matchedCmd === "/removegroup" ||
+    matchedCmd === "/delgroup" ||
+    matchedCmd === "/grouplist" ||
+    matchedCmd === "/allowedgroups"
+  ) {
+    if (!isAdmin) {
+      await sendMessage(
+        chatId,
+        `⚠️ Xin lỗi **${senderName}**, chỉ có Quản trị viên mới có quyền quản lý danh sách nhóm được phép!`,
+      );
+      return;
+    }
+
+    if (matchedCmd === "/grouplist" || matchedCmd === "/allowedgroups") {
+      const list = await storage.getAllowedGroups();
+      if (list.length === 0) {
+        await sendMessage(
+          chatId,
+          "ℹ️ Chưa có nhóm nào trong danh sách giới hạn (Bot đang mở quyền hoạt động ở tất cả các nhóm).",
+        );
+        return;
+      }
+
+      const lines = list.map((g, i) => {
+        const srcTag =
+          g.source === "env"
+            ? "_(từ .env)_"
+            : g.source === "env+redis"
+              ? "_(.env + Redis)_"
+              : "_(Redis)_";
+        const nameTag = g.name ? ` - ${g.name}` : "";
+        return `${i + 1}. \`${g.id}\`${nameTag} ${srcTag}`;
+      });
+
+      const reply = [
+        "{big}{green}🛡️ DANH SÁCH NHÓM ĐƯỢC CẤP PHÉP{/green}{/big}",
+        "",
+        ...lines,
+        "",
+        "💡 _Gõ `/allowgroup` trong nhóm để cấp phép thêm, hoặc `/disallowgroup <ID>` để hủy._",
+      ].join("\n");
+      await sendMessage(chatId, reply, "markdown");
+      return;
+    }
+
+    if (matchedCmd === "/allowgroup" || matchedCmd === "/addgroup") {
+      const targetGroupId = cmdParam || (chatType === "GROUP" ? String(chatId) : "");
+      if (!targetGroupId) {
+        await sendMessage(
+          chatId,
+          "💡 Vui lòng nhập Chat ID của nhóm: `/allowgroup <Chat_ID>` (hoặc gõ lệnh `/allowgroup` ngay trong nhóm cần cấp phép).",
+        );
+        return;
+      }
+
+      await storage.addAllowedGroup(
+        targetGroupId,
+        chatType === "GROUP" ? "Nhóm Zalo" : "",
+        senderName,
+      );
+
+      const reply = [
+        "{big}{green}✅ ĐÃ CẤP PHÉP HOẠT ĐỘNG CHO NHÓM!{/green}{/big}",
+        "",
+        `🔑 **Chat ID:** \`${targetGroupId}\``,
+        `👤 **Người cấp phép:** ${senderName}`,
+        `🛡️ **Trạng thái:** Đã lưu vào bộ nhớ Redis`,
+        "",
+        "_Từ giờ Bot HTD Media đã sẵn sàng hoạt động và phản hồi trong nhóm này!_",
+      ].join("\n");
+
+      await sendMessage(chatId, reply, "markdown");
+      return;
+    }
+
+    if (
+      matchedCmd === "/disallowgroup" ||
+      matchedCmd === "/removegroup" ||
+      matchedCmd === "/delgroup"
+    ) {
+      const targetGroupId = cmdParam || (chatType === "GROUP" ? String(chatId) : "");
+      if (!targetGroupId) {
+        await sendMessage(
+          chatId,
+          "💡 Vui lòng chỉ định Chat ID cần gỡ: `/disallowgroup <Chat_ID>` (hoặc gõ ngay trong nhóm cần gỡ).",
+        );
+        return;
+      }
+
+      await storage.removeAllowedGroup(targetGroupId);
+
+      const reply = [
+        "{big}{orange}🚫 ĐÃ HỦY CẤP PHÉP HOẠT ĐỘNG CỦA NHÓM{/orange}{/big}",
+        "",
+        `🔑 **Chat ID:** \`${targetGroupId}\``,
+        `👤 **Người thực hiện:** ${senderName}`,
+        "",
+        "_Bot sẽ không còn phản hồi tin nhắn trong nhóm này nữa._",
+        "_(💡 Nếu ID này vẫn còn trong biến ALLOWED_GROUP_IDS của .env, bạn nên xóa khỏi .env khi tiện để tránh nạp lại khi redeploy.)_",
+      ].join("\n");
+
+      await sendMessage(chatId, reply, "markdown");
       return;
     }
   }

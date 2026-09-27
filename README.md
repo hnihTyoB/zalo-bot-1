@@ -85,6 +85,11 @@ npm run dev
 - `/start`: Giới thiệu bot và các khả năng nổi bật.
 - `/help`: Xem hướng dẫn sử dụng chi tiết.
 - `/reset`: Xóa lịch sử trò chuyện của cuộc hội thoại để bắt đầu chủ đề mới.
+- `/id`: Xem Zalo User ID và Chat ID (hỗ trợ kiểm tra ID của người khác khi reply/mention).
+- `/groupid`: Xem Chat ID của nhóm chat hiện tại và trạng thái cấp phép hoạt động.
+- `/allowgroup`: (Quản trị viên) Cấp phép cho nhóm hiện tại hoạt động (hoặc `/allowgroup <Chat_ID>`), tự động lưu vào Redis mà không cần redeploy.
+- `/disallowgroup`: (Quản trị viên) Hủy cấp phép nhóm (hoặc `/disallowgroup <Chat_ID>`).
+- `/grouplist`: (Quản trị viên) Xem danh sách tất cả các nhóm đã được cấp phép.
 - `/summary` (hoặc `@Bot tóm tắt`): Yêu cầu Bot tóm tắt cuộc thảo luận gần nhất trong nhóm, các quyết định và việc cần làm.
 - **Gửi ảnh kèm câu hỏi**: Gửi hình bài viết, hóa đơn, bảng báo giá để Bot đọc và phân tích chi tiết.
 
