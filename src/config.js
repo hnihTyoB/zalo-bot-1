@@ -1,5 +1,6 @@
 require('dotenv').config();
 
+const ownerId = process.env.OWNER_USER_ID || process.env.ADMIN_USER_ID || '45d7169545c0ac9ef5d1';
 const adminIdsRaw = process.env.ADMIN_USER_IDS || process.env.ADMIN_USER_ID || '45d7169545c0ac9ef5d1';
 const blockedIdsRaw = process.env.BLOCKED_USER_IDS || '';
 const allowedGroupIdsRaw = process.env.ALLOWED_GROUP_IDS || process.env.ALLOWED_GROUP_ID || '';
@@ -22,7 +23,8 @@ const config = {
   geminiModel: process.env.GEMINI_MODEL || 'gemini-flash-latest',
   webhookSecretToken: process.env.WEBHOOK_SECRET_TOKEN || 'htd_secret_token_2026_secure',
   zaloApiBaseUrl: 'https://bot-api.zaloplatforms.com',
-  adminUserIds: adminIdsRaw.split(',').map(id => id.trim()).filter(Boolean),
+  ownerId: ownerId.trim(),
+  adminUserIds: [...new Set([ownerId.trim(), ...adminIdsRaw.split(',').map(id => id.trim())])].filter(Boolean),
   blockedUserIds: blockedIdsRaw.split(',').map(id => id.trim()).filter(Boolean),
   allowedGroupIds: allowedGroupIdsRaw.split(',').map(id => id.trim()).filter(Boolean),
   upstashRedisRestUrl: process.env.UPSTASH_REDIS_REST_URL || '',

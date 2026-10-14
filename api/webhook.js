@@ -41,6 +41,11 @@ Tôi là trợ lý AI thông minh của HTD Media, luôn sẵn sàng hỗ trợ 
 - \`/disallowgroup\` : Hủy cấp phép nhóm hiện tại (hoặc \`/disallowgroup <Chat_ID>\`).
 - \`/grouplist\` : Xem danh sách các nhóm chat đã được cấp phép.
 
+👑 **Quản Trị Viên Tối Cao (Chỉ dành riêng cho Bạn - Chủ sở hữu):**
+- \`/addadmin\` : Gán quyền Quản trị viên (ví dụ: \`/addadmin <ID>\`, tag @Tên hoặc bấm Reply).
+- \`/removeadmin\` : Xóa quyền Quản trị viên (ví dụ: \`/removeadmin <ID>\`, tag @Tên hoặc bấm Reply).
+- \`/adminlist\` : Xem danh sách toàn bộ Quản trị viên hiện tại.
+
 ⏰ **Tạo Nhắc Hẹn Tự Động (Dành riêng cho Quản trị viên):**
 - Quản trị viên chỉ cần nói câu bình thường:
   + *"nhắc tôi 15 phút nữa gọi cho đối tác"*
@@ -132,7 +137,8 @@ module.exports = async (req, res) => {
   const senderName = msg.from?.display_name || "Bạn";
   const chatType = msg.chat?.chat_type || "PRIVATE";
   const botId = config.zaloBotToken ? config.zaloBotToken.split(":")[0] : "";
-  const isAdmin = config.adminUserIds.includes(senderId);
+  const isOwner = storage.isUserOwner(senderId);
+  const isAdmin = await storage.isUserAdmin(senderId);
   const isBlocked = await storage.isUserBlocked(senderId);
 
   // KIỂM TRA BLACKLIST (DANH SÁCH BỊ CHẶN):
@@ -170,8 +176,8 @@ module.exports = async (req, res) => {
         /(?:^|\s)\/(?:id|myid|whois|groupid)(?:\s|$)/i.test(cleanCheckText);
 
       const isGroupAdminCmd =
-        /(?:^|\s)\/(?:allowgroup|addgroup|disallowgroup|removegroup|delgroup|grouplist|allowedgroups)(?:\s|$)/i.test(rawCheckText) ||
-        /(?:^|\s)\/(?:allowgroup|addgroup|disallowgroup|removegroup|delgroup|grouplist|allowedgroups)(?:\s|$)/i.test(cleanCheckText);
+        /(?:^|\s)\/(?:allowgroup|addgroup|disallowgroup|removegroup|delgroup|grouplist|allowedgroups|addadmin|setadmin|removeadmin|deladmin|adminlist|admins)(?:\s|$)/i.test(rawCheckText) ||
+        /(?:^|\s)\/(?:allowgroup|addgroup|disallowgroup|removegroup|delgroup|grouplist|allowedgroups|addadmin|setadmin|removeadmin|deladmin|adminlist|admins)(?:\s|$)/i.test(cleanCheckText);
 
       if (isIdCmd) {
         const reply = [
@@ -667,10 +673,10 @@ module.exports = async (req, res) => {
     return res.status(200).json({ ok: true, zalo: zaloRes });
   }
 
-  // 7. Nhận diện lệnh quản trị (/id, /myid, /whois, /groupid, /block, /unblock, /blocklist, /allowgroup, /addgroup, /disallowgroup, /removegroup, /delgroup, /grouplist, /allowedgroups)
+  // 7. Nhận diện lệnh quản trị (/id, /myid, /whois, /groupid, /block, /unblock, /blocklist, /allowgroup, /addgroup, /disallowgroup, /removegroup, /delgroup, /grouplist, /allowedgroups, /addadmin, /setadmin, /removeadmin, /deladmin, /adminlist, /admins)
   // Hỗ trợ cả khi Zalo tự chèn "@Tên" lúc bấm Reply hoặc khi mention đồng thời @Tên @Bot HTD Media /block
   const cmdMatch = rawText.match(
-    /(?:^|\s)\/(id|myid|whois|groupid|blocklist|block|unblock|allowgroup|addgroup|disallowgroup|removegroup|delgroup|grouplist|allowedgroups)(?:\s+(.*))?$/i,
+    /(?:^|\s)\/(id|myid|whois|groupid|blocklist|block|unblock|allowgroup|addgroup|disallowgroup|removegroup|delgroup|grouplist|allowedgroups|addadmin|setadmin|removeadmin|deladmin|adminlist|admins)(?:\s+(.*))?$/i,
   );
   const matchedCmd = cmdMatch ? "/" + cmdMatch[1].toLowerCase() : null;
   const cmdParam = cmdMatch && cmdMatch[2] ? cmdMatch[2].trim() : "";
@@ -720,9 +726,11 @@ module.exports = async (req, res) => {
         `🔑 **Chat ID của nhóm:** \`${chatId}\``,
         `💬 **Loại cuộc trò chuyện:** Group (Nhóm Zalo)`,
         `🛡️ **Trạng thái:** ${isAllowed ? "✅ Đã cấp phép hoạt động" : "⚠️ Chưa được cấp phép"}`,
-        isAdmin
-          ? "⭐ **Quyền hạn của bạn:** Quản trị viên (Admin)"
-          : "👥 **Quyền hạn của bạn:** Thành viên",
+        isOwner
+          ? "👑 **Quyền hạn của bạn:** Chủ sở hữu (Owner / Root Admin)"
+          : isAdmin
+            ? "⭐ **Quyền hạn của bạn:** Quản trị viên (Admin)"
+            : "👥 **Quyền hạn của bạn:** Thành viên",
         "",
         ...(isAllowed
           ? ["_💡 Nhóm này đã được cấp phép, Bot sẵn sàng phục vụ tất cả thành viên!_"]
@@ -744,13 +752,16 @@ module.exports = async (req, res) => {
     }
 
     if (targetId) {
-      const isTargetAdmin = config.adminUserIds.includes(targetId);
+      const isTargetOwner = storage.isUserOwner(targetId);
+      const isTargetAdmin = await storage.isUserAdmin(targetId);
       const isTargetBlocked = await storage.isUserBlocked(targetId);
       const statusStr = isTargetBlocked
         ? "🚫 Đang bị chặn"
-        : isTargetAdmin
-          ? "⭐ Quản trị viên (Admin)"
-          : "👥 Thành viên";
+        : isTargetOwner
+          ? "👑 Chủ sở hữu (Root Admin)"
+          : isTargetAdmin
+            ? "⭐ Quản trị viên (Admin)"
+            : "👥 Thành viên";
 
       const reply = [
         "{big}{green}🆔 THÔNG TIN NGƯỜI DÙNG ĐƯỢC CHỌN{/green}{/big}",
@@ -780,9 +791,11 @@ module.exports = async (req, res) => {
       `🔑 **Zalo User ID:** \`${senderId}\``,
       `💬 **Chat ID:** \`${chatId}\` (${chatType})`,
       ...(groupStatusLine ? [groupStatusLine] : []),
-      isAdmin
-        ? "⭐ **Quyền hạn:** Quản trị viên (Admin)"
-        : "👥 **Quyền hạn:** Thành viên",
+      isOwner
+        ? "👑 **Quyền hạn:** Chủ sở hữu (Owner / Root Admin)"
+        : isAdmin
+          ? "⭐ **Quyền hạn:** Quản trị viên (Admin)"
+          : "👥 **Quyền hạn:** Thành viên",
       "",
       chatType === "GROUP"
         ? "_💡 Dùng Chat ID này để cấp phép nhóm qua lệnh `/allowgroup` hoặc biến ALLOWED_GROUP_IDS trong file .env._"
@@ -864,10 +877,10 @@ module.exports = async (req, res) => {
         );
         return res.status(200).json({ ok: true, zalo: zaloRes });
       }
-      if (config.adminUserIds.includes(targetId)) {
+      if (await storage.isUserAdmin(targetId)) {
         const zaloRes = await sendMessage(
           chatId,
-          "⚠️ Không thể chặn Quản trị viên!",
+          "⚠️ Không thể chặn Quản trị viên hoặc Chủ sở hữu!",
         );
         return res.status(200).json({ ok: true, zalo: zaloRes });
       }
@@ -984,6 +997,152 @@ module.exports = async (req, res) => {
         "",
         "_Bot sẽ không còn phản hồi tin nhắn trong nhóm này nữa._",
         "_(💡 Nếu ID này vẫn còn trong biến ALLOWED_GROUP_IDS của .env, bạn nên xóa khỏi .env khi tiện để tránh nạp lại khi redeploy.)_",
+      ].join("\n");
+
+      const zaloRes = await sendMessage(chatId, reply, "markdown");
+      return res.status(200).json({ ok: true, zalo: zaloRes });
+    }
+  }
+
+  // 7.4 Lệnh quản trị Quản trị viên: /addadmin, /setadmin, /removeadmin, /deladmin, /adminlist, /admins
+  // Lưu ý: Chỉ duy nhất Chủ sở hữu Bot (Root Owner) mới có quyền gán và xóa Quản trị viên
+  if (
+    matchedCmd === "/addadmin" ||
+    matchedCmd === "/setadmin" ||
+    matchedCmd === "/removeadmin" ||
+    matchedCmd === "/deladmin" ||
+    matchedCmd === "/adminlist" ||
+    matchedCmd === "/admins"
+  ) {
+    if (matchedCmd === "/adminlist" || matchedCmd === "/admins") {
+      if (!isAdmin) {
+        const zaloRes = await sendMessage(
+          chatId,
+          "⚠️ Xin lỗi, tính năng xem danh sách Quản trị viên chỉ dành cho Quản trị viên và Chủ sở hữu Bot!",
+        );
+        return res.status(200).json({ ok: true, blocked: true, zalo: zaloRes });
+      }
+
+      const list = await storage.getAdminUsers();
+      if (list.length === 0) {
+        const zaloRes = await sendMessage(
+          chatId,
+          "📋 Danh sách Quản trị viên hiện đang trống.",
+        );
+        return res.status(200).json({ ok: true, zalo: zaloRes });
+      }
+
+      const lines = list.map((u, i) => {
+        const roleTag =
+          u.role === "owner"
+            ? "👑 **Chủ sở hữu (Root Admin)**"
+            : "⭐ **Quản trị viên (Admin)**";
+        const srcTag =
+          u.source === "env"
+            ? "_(từ .env)_"
+            : u.source === "env+redis"
+              ? "_(.env + Redis)_"
+              : u.source === "owner"
+                ? "_(Chủ sở hữu hệ thống)_"
+                : "_(Redis)_";
+        const namePart = u.name ? ` (${u.name})` : "";
+        return `${i + 1}. \`${u.id}\`${namePart} - ${roleTag} ${srcTag}`;
+      });
+
+      const reply = [
+        "{big}{green}👑 DANH SÁCH QUẢN TRỊ VIÊN BOT{/green}{/big}",
+        "",
+        ...lines,
+        "",
+        isOwner
+          ? "_💡 Dùng `/addadmin <ID>` để thêm hoặc `/removeadmin <ID>` để xóa Quản trị viên._"
+          : "_💡 Chỉ có Chủ sở hữu Bot mới có quyền thêm hoặc xóa Quản trị viên._",
+      ].join("\n");
+
+      const zaloRes = await sendMessage(chatId, reply, "markdown");
+      return res.status(200).json({ ok: true, zalo: zaloRes });
+    }
+
+    // Các lệnh gán và xóa Quản trị viên: CHỈ DÀNH RIÊNG CHO CHỦ SỞ HỮU (OWNER)
+    if (!isOwner) {
+      console.warn(
+        `🚫 [Admin Blocked] Người dùng ${senderName} (${senderId}) không phải Chủ sở hữu cố thực hiện lệnh: ${matchedCmd}`,
+      );
+      const zaloRes = await sendMessage(
+        chatId,
+        "⚠️ Xin lỗi, tính năng gán và xóa Quản trị viên chỉ dành riêng cho Chủ sở hữu Bot (Root Admin)!",
+      );
+      return res.status(200).json({ ok: true, blocked: true, zalo: zaloRes });
+    }
+
+    if (matchedCmd === "/addadmin" || matchedCmd === "/setadmin") {
+      if (!targetId) {
+        const zaloRes = await sendMessage(
+          chatId,
+          "💡 Vui lòng chỉ định ID: `/addadmin <Zalo_User_ID>` hoặc bấm Reply tin nhắn của người cần gán và gõ `/addadmin` (hoặc tag @Tên).",
+        );
+        return res.status(200).json({ ok: true, zalo: zaloRes });
+      }
+
+      if (storage.isUserOwner(targetId)) {
+        const zaloRes = await sendMessage(
+          chatId,
+          "ℹ️ Người này đã là Chủ sở hữu tối cao (Owner) của Bot rồi!",
+        );
+        return res.status(200).json({ ok: true, zalo: zaloRes });
+      }
+
+      await storage.addAdminUser(targetId, targetName, senderName);
+
+      const targetLabel = targetName
+        ? `**${targetName}** (ID: \`${targetId}\`)`
+        : `ID \`${targetId}\``;
+
+      const reply = [
+        "{big}{green}⭐ ĐÃ GÁN QUYỀN QUẢN TRỊ VIÊN THÀNH CÔNG!{/green}{/big}",
+        "",
+        `👤 **Người được gán:** ${targetLabel}`,
+        `👑 **Người thực hiện:** ${senderName} (Chủ sở hữu)`,
+        `🛡️ **Trạng thái:** Đã lưu vào bộ nhớ Redis`,
+        "",
+        "_Từ giờ người này có toàn quyền Quản trị viên: duyệt nhóm, chặn người dùng và tạo lịch nhắc hẹn._",
+      ].join("\n");
+
+      const zaloRes = await sendMessage(chatId, reply, "markdown");
+      return res.status(200).json({ ok: true, zalo: zaloRes });
+    }
+
+    if (matchedCmd === "/removeadmin" || matchedCmd === "/deladmin") {
+      if (!targetId) {
+        const zaloRes = await sendMessage(
+          chatId,
+          "💡 Vui lòng chỉ định ID: `/removeadmin <Zalo_User_ID>` hoặc bấm Reply tin nhắn của người cần xóa và gõ `/removeadmin` (hoặc tag @Tên).",
+        );
+        return res.status(200).json({ ok: true, zalo: zaloRes });
+      }
+
+      if (storage.isUserOwner(targetId)) {
+        const zaloRes = await sendMessage(
+          chatId,
+          "⚠️ Không thể xóa quyền Quản trị viên của Chủ sở hữu Bot (Root Admin)!",
+        );
+        return res.status(200).json({ ok: true, zalo: zaloRes });
+      }
+
+      await storage.removeAdminUser(targetId);
+
+      const targetLabel = targetName
+        ? `**${targetName}** (ID: \`${targetId}\`)`
+        : `ID \`${targetId}\``;
+
+      const reply = [
+        "{big}{orange}🗑️ ĐÃ XÓA QUYỀN QUẢN TRỊ VIÊN{/orange}{/big}",
+        "",
+        `👤 **Người bị xóa:** ${targetLabel}`,
+        `👑 **Người thực hiện:** ${senderName} (Chủ sở hữu)`,
+        "",
+        "_Người này đã trở về trạng thái Thành viên bình thường._",
+        "_(💡 Nếu ID này vẫn còn nằm trong biến ADMIN_USER_ID của file .env, bạn nên xóa khỏi file .env khi tiện để tránh tự nạp lại khi redeploy.)_",
       ].join("\n");
 
       const zaloRes = await sendMessage(chatId, reply, "markdown");

@@ -435,6 +435,185 @@ async function isUserBlocked(userId) {
 }
 
 // ==========================================
+// QUẢN LÝ DANH SÁCH QUẢN TRỊ VIÊN (ADMINS)
+// ==========================================
+const REDIS_ADMINS_KEY = 'zalo:admins:list';
+let memoryAdmins = [];
+
+/**
+ * Kiểm tra xem người dùng có phải là Chủ sở hữu (Owner/Root Admin) hay không
+ * @param {string|number} userId
+ * @returns {boolean}
+ */
+function isUserOwner(userId) {
+  if (!userId) return false;
+  return String(userId).trim() === String(config.ownerId || '45d7169545c0ac9ef5d1').trim();
+}
+
+/**
+ * Lấy danh sách toàn bộ Quản trị viên (gộp Chủ sở hữu, .env và Redis)
+ * @returns {Promise<Array<{ id: string, name?: string, role: string, addedBy?: string, addedAt?: number, source: string }>>}
+ */
+async function getAdminUsers() {
+  let redisAdmins = [];
+  if (config.upstashRedisRestUrl && config.upstashRedisRestToken) {
+    const raw = await callRedisCommand('GET', REDIS_ADMINS_KEY);
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) redisAdmins = parsed;
+      } catch (e) {}
+    }
+  } else {
+    redisAdmins = memoryAdmins;
+  }
+
+  const allMap = new Map();
+
+  // 1. Chủ sở hữu (Owner) - Luôn luôn đứng đầu và là Quản trị viên tối cao
+  const ownerId = String(config.ownerId || '45d7169545c0ac9ef5d1').trim();
+  allMap.set(ownerId, {
+    id: ownerId,
+    name: 'Chủ sở hữu Bot',
+    role: 'owner',
+    addedBy: 'Hệ thống (Root)',
+    addedAt: null,
+    source: 'owner'
+  });
+
+  // 2. Các Admin cấu hình tĩnh trong .env
+  if (Array.isArray(config.adminUserIds)) {
+    for (const id of config.adminUserIds) {
+      const idStr = String(id).trim();
+      if (idStr && !allMap.has(idStr)) {
+        allMap.set(idStr, {
+          id: idStr,
+          name: '',
+          role: 'admin',
+          addedBy: 'Hệ thống (.env)',
+          addedAt: null,
+          source: 'env'
+        });
+      }
+    }
+  }
+
+  // 3. Các Admin cấu hình động trên Redis
+  for (const a of redisAdmins) {
+    const idStr = String(typeof a === 'string' ? a : a.id).trim();
+    if (idStr) {
+      const existing = allMap.get(idStr);
+      if (existing && existing.role === 'owner') continue;
+      allMap.set(idStr, {
+        id: idStr,
+        name: typeof a === 'object' && a.name ? a.name : existing?.name || '',
+        role: 'admin',
+        addedBy: typeof a === 'object' && a.addedBy ? a.addedBy : existing?.addedBy || '',
+        addedAt: typeof a === 'object' && a.addedAt ? a.addedAt : existing?.addedAt || null,
+        source: existing ? 'env+redis' : 'redis'
+      });
+    }
+  }
+
+  return Array.from(allMap.values());
+}
+
+/**
+ * Thêm người dùng vào danh sách Quản trị viên
+ * @param {string} userId
+ * @param {string} [userName]
+ * @param {string} [addedBy]
+ * @returns {Promise<boolean>}
+ */
+async function addAdminUser(userId, userName = '', addedBy = '') {
+  const idStr = String(userId).trim();
+  if (!idStr) return false;
+
+  let current = [];
+  if (config.upstashRedisRestUrl && config.upstashRedisRestToken) {
+    const raw = await callRedisCommand('GET', REDIS_ADMINS_KEY);
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) current = parsed;
+      } catch (e) {}
+    }
+  } else {
+    current = memoryAdmins;
+  }
+
+  if (!current.some(a => (typeof a === 'string' ? a : a.id) === idStr)) {
+    current.push({
+      id: idStr,
+      name: userName,
+      addedBy,
+      addedAt: Date.now()
+    });
+    memoryAdmins = current;
+    if (config.upstashRedisRestUrl && config.upstashRedisRestToken) {
+      await callRedisCommand('SET', REDIS_ADMINS_KEY, JSON.stringify(current));
+    }
+  }
+
+  if (Array.isArray(config.adminUserIds) && !config.adminUserIds.includes(idStr)) {
+    config.adminUserIds.push(idStr);
+  }
+
+  return true;
+}
+
+/**
+ * Xóa người dùng khỏi danh sách Quản trị viên (Không thể xóa Chủ sở hữu)
+ * @param {string} userId
+ * @returns {Promise<boolean>}
+ */
+async function removeAdminUser(userId) {
+  const idStr = String(userId).trim();
+  if (!idStr || isUserOwner(idStr)) return false;
+
+  let current = [];
+  if (config.upstashRedisRestUrl && config.upstashRedisRestToken) {
+    const raw = await callRedisCommand('GET', REDIS_ADMINS_KEY);
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) current = parsed;
+      } catch (e) {}
+    }
+  } else {
+    current = memoryAdmins;
+  }
+
+  const filtered = current.filter(a => (typeof a === 'string' ? a : a.id) !== idStr);
+  memoryAdmins = filtered;
+  if (config.upstashRedisRestUrl && config.upstashRedisRestToken) {
+    await callRedisCommand('SET', REDIS_ADMINS_KEY, JSON.stringify(filtered));
+  }
+
+  if (Array.isArray(config.adminUserIds)) {
+    config.adminUserIds = config.adminUserIds.filter(id => id !== idStr);
+  }
+
+  return true;
+}
+
+/**
+ * Kiểm tra xem người dùng có quyền Quản trị viên (hoặc Chủ sở hữu) hay không
+ * @param {string} userId
+ * @returns {Promise<boolean>}
+ */
+async function isUserAdmin(userId) {
+  const idStr = String(userId).trim();
+  if (!idStr) return false;
+  if (isUserOwner(idStr)) return true;
+  if (Array.isArray(config.adminUserIds) && config.adminUserIds.includes(idStr)) {
+    return true;
+  }
+  const all = await getAdminUsers();
+  return all.some(a => a.id === idStr);
+}
+
+// ==========================================
 // QUẢN LÝ DANH SÁCH NHÓM ĐƯỢC PHÉP (ALLOWED GROUPS)
 // ==========================================
 const REDIS_ALLOWED_GROUPS_KEY = 'zalo:allowed_groups:list';
@@ -760,6 +939,11 @@ module.exports = {
   addBlockedUser,
   removeBlockedUser,
   isUserBlocked,
+  isUserOwner,
+  getAdminUsers,
+  addAdminUser,
+  removeAdminUser,
+  isUserAdmin,
   getAllowedGroups,
   addAllowedGroup,
   removeAllowedGroup,
