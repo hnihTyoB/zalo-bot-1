@@ -16,6 +16,10 @@ const {
 const storage = require("../src/storage");
 const { checkAndSendDueReminders } = require("../src/reminder-worker");
 const config = require("../src/config");
+const {
+  isRegionalDiscrimination,
+  REGIONAL_DISCRIMINATION_REPLY,
+} = require("../src/moderation");
 
 const HELP_TEXT = `🤖 **HƯỚNG DẪN SỬ DỤNG BOT HTD MEDIA (AI ĐA NĂNG)**
 
@@ -239,7 +243,17 @@ module.exports = async (req, res) => {
 
   if (eventName === "message.image.received" || photoUrl) {
     let caption = (msg?.caption || msg?.text || msg?.description || "").trim();
+    const rawCaption = caption;
     caption = caption.replace(/@?Bot HTD Media/gi, "").trim();
+
+    // Kiểm tra phân biệt vùng miền trong chú thích ảnh
+    if (isRegionalDiscrimination(rawCaption) || isRegionalDiscrimination(caption)) {
+      console.log(
+        `🚨 [VÙNG MIỀN] Phát hiện caption ảnh phân biệt vùng miền từ ${senderName} (${senderId}) tại [${chatType} ${chatId}]: "${rawCaption}"`,
+      );
+      const zaloRes = await sendMessage(chatId, REGIONAL_DISCRIMINATION_REPLY);
+      return res.status(200).json({ ok: true, trigger: "regional_discrimination", zalo: zaloRes });
+    }
 
     // Lưu ảnh gần nhất của chat để phục vụ các câu hỏi tiếp theo
     if (photoUrl) {
@@ -330,6 +344,15 @@ module.exports = async (req, res) => {
   rawText = rawText
     .replace(/@?(?:Bot\s*HTD\s*Media|Bot|HTD\s*Media)\b/gi, "")
     .trim();
+
+  // 3.4 Kiểm tra phân biệt vùng miền (kể cả không gọi/tag Bot):
+  if (isRegionalDiscrimination(msg.text) || isRegionalDiscrimination(rawText)) {
+    console.log(
+      `🚨 [VÙNG MIỀN] Phát hiện phân biệt vùng miền từ ${senderName} (${senderId}) tại [${chatType} ${chatId}]: "${msg.text}"`,
+    );
+    const zaloRes = await sendMessage(chatId, REGIONAL_DISCRIMINATION_REPLY);
+    return res.status(200).json({ ok: true, trigger: "regional_discrimination", zalo: zaloRes });
+  }
 
   // 3.5 Lệnh xem thông tin tài khoản ngân hàng & gửi mã QR chuyển khoản (/stk)
   const isStkCmd =

@@ -91,6 +91,7 @@ npm run dev
 - `/disallowgroup`: (Quản trị viên) Hủy cấp phép nhóm (hoặc `/disallowgroup <Chat_ID>`).
 - `/grouplist`: (Quản trị viên) Xem danh sách tất cả các nhóm đã được cấp phép.
 - `/summary` (hoặc `@Bot tóm tắt`): Yêu cầu Bot tóm tắt cuộc thảo luận gần nhất trong nhóm, các quyết định và việc cần làm.
+- **Tự động phản hồi tin nhắn vi phạm**: Tự động phát hiện và phản ứng tức thì khi có thành viên gửi các tin nhắn phân biệt/miệt thị vùng miền (ví dụ: *Sv 37, sv37, súc vật 37, súc vật nghệ an, sv 36...*) trong nhóm mà không cần gọi hay tag Bot.
 - **Gửi ảnh kèm câu hỏi**: Gửi hình bài viết, hóa đơn, bảng báo giá để Bot đọc và phân tích chi tiết.
 
 ---

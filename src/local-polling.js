@@ -20,6 +20,10 @@ const {
 const storage = require("./storage");
 const { checkAndSendDueReminders } = require("./reminder-worker");
 const config = require("./config");
+const {
+  isRegionalDiscrimination,
+  REGIONAL_DISCRIMINATION_REPLY,
+} = require("./moderation");
 
 let isRunning = true;
 let botInfo = null;
@@ -194,7 +198,17 @@ async function handleMessage(eventData) {
         .replace(new RegExp(`@?${botInfo.display_name}`, "gi"), "")
         .trim();
     }
+    const rawCaption = caption;
     caption = caption.replace(/@?Bot HTD Media/gi, "").trim();
+
+    // Kiểm tra phân biệt vùng miền trong chú thích ảnh
+    if (isRegionalDiscrimination(rawCaption) || isRegionalDiscrimination(caption)) {
+      console.log(
+        `🚨 [VÙNG MIỀN] Phát hiện caption ảnh phân biệt vùng miền từ ${senderName} (${senderId}) tại [${chatType} ${chatId}]: "${rawCaption}"`,
+      );
+      await sendMessage(chatId, REGIONAL_DISCRIMINATION_REPLY);
+      return;
+    }
 
     // Lưu ảnh gần nhất của chat để phục vụ các câu hỏi tiếp theo
     if (photoUrl) {
@@ -288,6 +302,15 @@ async function handleMessage(eventData) {
   rawText = rawText
     .replace(/@?(?:Bot\s*HTD\s*Media|Bot|HTD\s*Media)\b/gi, "")
     .trim();
+
+  // 0.4 Kiểm tra phân biệt vùng miền (kể cả không gọi/tag Bot):
+  if (isRegionalDiscrimination(msg.text) || isRegionalDiscrimination(rawText)) {
+    console.log(
+      `🚨 [VÙNG MIỀN] Phát hiện phân biệt vùng miền từ ${senderName} (${senderId}) tại [${chatType} ${chatId}]: "${msg.text}"`,
+    );
+    await sendMessage(chatId, REGIONAL_DISCRIMINATION_REPLY);
+    return;
+  }
 
   // 0.5 Lệnh xem thông tin tài khoản ngân hàng & gửi mã QR chuyển khoản (/stk)
   const isStkCmd =
