@@ -55,6 +55,11 @@ Tôi là trợ lý AI thông minh của HTD Media, luôn sẵn sàng hỗ trợ 
 - \`/removeadmin\` : Xóa quyền Quản trị viên (ví dụ: \`/removeadmin <ID>\`, tag @Tên hoặc bấm Reply).
 - \`/adminlist\` : Xem danh sách toàn bộ Quản trị viên hiện tại.
 
+📢 **Điều Khiển Bot Phát Ngôn Từ Xa (Quản trị viên & Chủ sở hữu):**
+- \`/send <ID_Nhóm> <Nội dung>\` : Thay mặt bạn gửi tin nhắn vào nhóm (hoặc \`/say\`).
+- Gửi ảnh kèm chú thích \`/send <ID_Nhóm> [Lời nhắn]\` : Thay mặt bạn gửi ảnh vào nhóm.
+- Bấm Reply ảnh/tin nhắn kèm \`/send <ID_Nhóm>\` : Chuyển tiếp ảnh/tin nhắn đó vào nhóm.
+
 ⏰ **Tạo Nhắc Hẹn Tự Động (Dành riêng cho Quản trị viên):**
 - Quản trị viên chỉ cần nói câu bình thường:
   + *"nhắc tôi 15 phút nữa gọi cho đối tác"*
@@ -127,8 +132,8 @@ async function handleMessage(eventData) {
         /(?:^|\s)\/(?:id|myid|whois|groupid)(?:\s|$)/i.test(cleanCheckText);
 
       const isGroupAdminCmd =
-        /(?:^|\s)\/(?:allowgroup|addgroup|disallowgroup|removegroup|delgroup|grouplist|allowedgroups|addadmin|setadmin|removeadmin|deladmin|adminlist|admins)(?:\s|$)/i.test(rawCheckText) ||
-        /(?:^|\s)\/(?:allowgroup|addgroup|disallowgroup|removegroup|delgroup|grouplist|allowedgroups|addadmin|setadmin|removeadmin|deladmin|adminlist|admins)(?:\s|$)/i.test(cleanCheckText);
+        /(?:^|\s)\/(?:allowgroup|addgroup|disallowgroup|removegroup|delgroup|grouplist|allowedgroups|addadmin|setadmin|removeadmin|deladmin|adminlist|admins|send|say|broadcast|truyentin)(?:\s|$)/i.test(rawCheckText) ||
+        /(?:^|\s)\/(?:allowgroup|addgroup|disallowgroup|removegroup|delgroup|grouplist|allowedgroups|addadmin|setadmin|removeadmin|deladmin|adminlist|admins|send|say|broadcast|truyentin)(?:\s|$)/i.test(cleanCheckText);
 
       if (isIdCmd) {
         const reply = [
@@ -219,6 +224,85 @@ async function handleMessage(eventData) {
     // Lưu ảnh gần nhất của chat để phục vụ các câu hỏi tiếp theo
     if (photoUrl) {
       await storage.setLastImageUrl(chatId, photoUrl, { senderName, senderId, caption });
+    }
+
+    // Kiểm tra lệnh gửi ảnh từ xa (/send, /say, /broadcast, /truyentin)
+    const sendImgMatch = caption.match(
+      /^(?:\/|!)?(?:send|say|broadcast|truyentin)(?:\s+(\S+))?(?:[\s\n]+([\s\S]*))?$/i,
+    );
+    if (sendImgMatch) {
+      if (!isAdmin) {
+        await sendMessage(
+          chatId,
+          `⚠️ Xin lỗi **${senderName}**, chỉ có Quản trị viên và Chủ sở hữu mới có quyền điều khiển Bot gửi ảnh từ xa!`,
+        );
+        return;
+      }
+
+      const forwardTargetId = sendImgMatch[1] || "";
+      const forwardCaption = (sendImgMatch[2] || "").trim();
+
+      if (!forwardTargetId) {
+        const reply = [
+          "💡 **HƯỚNG DẪN GỬI ẢNH TỪ XA:**",
+          "Vui lòng nhập Chat ID nhóm trong phần chú thích của ảnh:",
+          "👉 `/send <ID_Nhóm> [Nội dung chú thích ảnh]`",
+          "",
+          "_(Gõ `/grouplist` để lấy Chat ID nhóm)_",
+        ].join("\n");
+        await sendMessage(chatId, reply);
+        return;
+      }
+
+      if (!photoUrl) {
+        await sendMessage(
+          chatId,
+          "⚠️ Bot chưa lấy được liên kết ảnh từ Zalo để chuyển tiếp. Bạn thử gửi lại nhé!",
+        );
+        return;
+      }
+
+      const allGroups = await storage.getAllowedGroups();
+      const matchedGroup = allGroups.find((g) => g.id === forwardTargetId);
+      const groupNameTag = matchedGroup?.name ? ` (${matchedGroup.name})` : "";
+
+      let photoRes = null;
+      try {
+        photoRes = await sendPhoto(forwardTargetId, photoUrl, forwardCaption);
+      } catch (err) {
+        photoRes = { ok: false, error: err.message };
+      }
+
+      if (photoRes && photoRes.ok) {
+        const reply = [
+          "{big}{green}✅ ĐÃ GỬI HÌNH ẢNH THÀNH CÔNG!{/green}{/big}",
+          "",
+          `🎯 **Đích đến:** \`${forwardTargetId}\`${groupNameTag}`,
+          `👤 **Người thực hiện:** ${senderName}`,
+          `🖼️ **Chú thích:** ${forwardCaption || "_(Không có chú thích)_"}`,
+        ].join("\n");
+        await sendMessage(chatId, reply, "markdown");
+        return;
+      } else {
+        const errDesc =
+          photoRes?.description ||
+          photoRes?.error ||
+          (photoRes?.error_code
+            ? `Mã lỗi ${photoRes.error_code}`
+            : "Lỗi không xác định từ Zalo API");
+        const reply = [
+          "{big}{red}❌ GỬI HÌNH ẢNH THẤT BẠI!{/red}{/big}",
+          "",
+          `🎯 **Đích đến:** \`${forwardTargetId}\`${groupNameTag}`,
+          `⚠️ **Lỗi từ Zalo:** ${errDesc}`,
+          "",
+          "💡 **Lưu ý:**",
+          "1. Hãy đảm bảo Bot đã được thêm vào nhóm chat này.",
+          "2. Kiểm tra Chat ID đã chính xác chưa (gõ `/grouplist` để xem danh sách).",
+        ].join("\n");
+        await sendMessage(chatId, reply, "markdown");
+        return;
+      }
     }
 
     console.log(
@@ -624,10 +708,10 @@ async function handleMessage(eventData) {
     return;
   }
 
-  // 4. Nhận diện lệnh quản trị (/id, /myid, /whois, /groupid, /block, /unblock, /blocklist, /allowgroup, /addgroup, /disallowgroup, /removegroup, /delgroup, /grouplist, /allowedgroups, /addadmin, /setadmin, /removeadmin, /deladmin, /adminlist, /admins)
+  // 4. Nhận diện lệnh quản trị (/id, /myid, /whois, /groupid, /block, /unblock, /blocklist, /allowgroup, /addgroup, /disallowgroup, /removegroup, /delgroup, /grouplist, /allowedgroups, /addadmin, /setadmin, /removeadmin, /deladmin, /adminlist, /admins, /send, /say, /broadcast, /truyentin)
   // Hỗ trợ cả khi Zalo tự chèn "@Tên" lúc bấm Reply hoặc khi mention đồng thời @Tên @Bot HTD Media /block
   const cmdMatch = rawText.match(
-    /(?:^|\s)\/(id|myid|whois|groupid|blocklist|block|unblock|allowgroup|addgroup|disallowgroup|removegroup|delgroup|grouplist|allowedgroups|addadmin|setadmin|removeadmin|deladmin|adminlist|admins)(?:\s+(.*))?$/i,
+    /(?:^|\s)\/(id|myid|whois|groupid|blocklist|block|unblock|allowgroup|addgroup|disallowgroup|removegroup|delgroup|grouplist|allowedgroups|addadmin|setadmin|removeadmin|deladmin|adminlist|admins|send|say|broadcast|truyentin)(?:\s+(.*))?$/i,
   );
   const matchedCmd = cmdMatch ? "/" + cmdMatch[1].toLowerCase() : null;
   const cmdParam = cmdMatch && cmdMatch[2] ? cmdMatch[2].trim() : "";
@@ -1096,6 +1180,177 @@ async function handleMessage(eventData) {
         "_(💡 Nếu ID này vẫn còn nằm trong biến ADMIN_USER_ID của file .env, bạn nên xóa khỏi file .env khi tiện để tránh tự nạp lại khi redeploy.)_",
       ].join("\n");
 
+      await sendMessage(chatId, reply, "markdown");
+      return;
+    }
+  }
+
+  // 4.5 Lệnh điều khiển Bot phát ngôn từ xa: /send, /say, /broadcast, /truyentin (Chỉ Quản trị viên & Chủ sở hữu)
+  if (
+    matchedCmd === "/send" ||
+    matchedCmd === "/say" ||
+    matchedCmd === "/broadcast" ||
+    matchedCmd === "/truyentin"
+  ) {
+    if (!isAdmin) {
+      await sendMessage(
+        chatId,
+        `⚠️ Xin lỗi **${senderName}**, chỉ có Quản trị viên và Chủ sở hữu mới có quyền điều khiển Bot phát ngôn từ xa!`,
+      );
+      return;
+    }
+
+    const parts = cmdParam.trim().split(/\s+/);
+    const forwardTargetId = parts[0] || "";
+    let forwardContent = cmdParam.substring(forwardTargetId.length).trim();
+
+    const quoted =
+      msg?.reply_to_message ||
+      msg?.quote ||
+      msg?.reply_to ||
+      msg?.quoted_message ||
+      eventData?.reply_to_message ||
+      eventData?.quote ||
+      eventData?.reply_to;
+
+    // Kiểm tra xem tin nhắn trích dẫn (quoted) có ảnh không
+    let quotedPhoto = null;
+    if (quoted) {
+      quotedPhoto = findImageUrl(quoted, quoted, quoted?.message || quoted);
+      if (
+        !quotedPhoto &&
+        (quoted?.msg_type?.includes("photo") ||
+          quoted?.msg_type?.includes("image") ||
+          /\[Hình ảnh\]|\[Photo\]|\[Image\]/i.test(quoted?.text || ""))
+      ) {
+        quotedPhoto = await storage.getLastImageUrl(chatId);
+      }
+      if (!forwardContent) {
+        forwardContent = (
+          quoted?.text ||
+          quoted?.caption ||
+          quoted?.content ||
+          quoted?.message?.text ||
+          ""
+        ).trim();
+      }
+    }
+
+    if (!forwardTargetId) {
+      const reply = [
+        "{big}{green}📢 ĐIỀU KHIỂN BOT PHÁT NGÔN TỪ XA{/green}{/big}",
+        "",
+        "💡 **Cú pháp sử dụng:**",
+        "• **Gửi tin nhắn văn bản vào nhóm:**",
+        "  👉 `/send <ID_Nhóm> <Nội dung tin nhắn>`",
+        "  _Ví dụ: `/send 6ede9afa66b88fe6d6a9 Chào cả nhà!`_",
+        "",
+        "• **Gửi hình ảnh vào nhóm:**",
+        "  Gửi ảnh trực tiếp cho Bot, kèm chú thích:",
+        "  👉 `/send <ID_Nhóm> [Lời nhắn]`",
+        "",
+        "• **Chuyển tiếp (Reply forward):**",
+        "  Bấm Trả lời (Reply) tin nhắn/ảnh bất kỳ trong chat và gõ:",
+        "  👉 `/send <ID_Nhóm>`",
+        "",
+        "_(💡 Mẹo: Gõ `/grouplist` để copy Chat ID các nhóm đã cấp phép)_",
+      ].join("\n");
+      await sendMessage(chatId, reply, "markdown");
+      return;
+    }
+
+    const allGroups = await storage.getAllowedGroups();
+    const matchedGroup = allGroups.find((g) => g.id === forwardTargetId);
+    const groupNameTag = matchedGroup?.name ? ` (${matchedGroup.name})` : "";
+
+    // Nếu có ảnh từ tin nhắn trích dẫn -> Gửi ảnh vào nhóm
+    if (quotedPhoto) {
+      let photoRes = null;
+      try {
+        photoRes = await sendPhoto(forwardTargetId, quotedPhoto, forwardContent);
+      } catch (err) {
+        photoRes = { ok: false, error: err.message };
+      }
+
+      if (photoRes && photoRes.ok) {
+        const reply = [
+          "{big}{green}✅ ĐÃ CHUYỂN TIẾP HÌNH ẢNH THÀNH CÔNG!{/green}{/big}",
+          "",
+          `🎯 **Đích đến:** \`${forwardTargetId}\`${groupNameTag}`,
+          `👤 **Người thực hiện:** ${senderName}`,
+          `🖼️ **Chú thích:** ${forwardContent || "_(Không có chú thích)_"}`,
+        ].join("\n");
+        await sendMessage(chatId, reply, "markdown");
+        return;
+      } else {
+        const errDesc =
+          photoRes?.description ||
+          photoRes?.error ||
+          (photoRes?.error_code
+            ? `Mã lỗi ${photoRes.error_code}`
+            : "Lỗi không xác định từ Zalo API");
+        const reply = [
+          "{big}{red}❌ CHUYỂN TIẾP HÌNH ẢNH THẤT BẠI!{/red}{/big}",
+          "",
+          `🎯 **Đích đến:** \`${forwardTargetId}\`${groupNameTag}`,
+          `⚠️ **Lỗi từ Zalo:** ${errDesc}`,
+          "",
+          "💡 _Đảm bảo Bot đã được thêm vào nhóm chat này và Chat ID là chính xác._",
+        ].join("\n");
+        await sendMessage(chatId, reply, "markdown");
+        return;
+      }
+    }
+
+    if (!forwardContent) {
+      const reply = [
+        `💡 Vui lòng nhập nội dung tin nhắn cần gửi đến \`${forwardTargetId}\`:`,
+        `👉 \`/send ${forwardTargetId} <Nội dung tin nhắn>\``,
+        `_(hoặc bấm Trả lời/Reply tin nhắn có sẵn kèm \`/send ${forwardTargetId}\`)_`,
+      ].join("\n");
+      await sendMessage(chatId, reply);
+      return;
+    }
+
+    let sendRes = null;
+    try {
+      sendRes = await sendMessage(forwardTargetId, forwardContent, "markdown");
+      if (!sendRes?.ok) {
+        sendRes = await sendMessage(forwardTargetId, forwardContent, null);
+      }
+    } catch (err) {
+      sendRes = { ok: false, error: err.message };
+    }
+
+    if (sendRes && sendRes.ok) {
+      const reply = [
+        "{big}{green}✅ ĐÃ GỬI TIN NHẮN THÀNH CÔNG!{/green}{/big}",
+        "",
+        `🎯 **Đích đến:** \`${forwardTargetId}\`${groupNameTag}`,
+        `👤 **Người thực hiện:** ${senderName}`,
+        "📝 **Nội dung đã gửi:**",
+        forwardContent,
+      ].join("\n");
+      await sendMessage(chatId, reply, "markdown");
+      return;
+    } else {
+      const errDesc =
+        sendRes?.description ||
+        sendRes?.error ||
+        (sendRes?.error_code
+          ? `Mã lỗi ${sendRes.error_code}`
+          : "Lỗi không xác định từ Zalo API");
+      const reply = [
+        "{big}{red}❌ GỬI TIN NHẮN THẤT BẠI!{/red}{/big}",
+        "",
+        `🎯 **Đích đến:** \`${forwardTargetId}\`${groupNameTag}`,
+        `⚠️ **Lỗi từ Zalo:** ${errDesc}`,
+        "",
+        "💡 **Lưu ý kiểm tra:**",
+        "1. Đảm bảo Bot đã được thêm vào nhóm chat này.",
+        "2. Đảm bảo Chat ID là chính xác (gõ `/grouplist` để kiểm tra danh sách nhóm).",
+        "3. Bot có quyền gửi tin nhắn trong nhóm.",
+      ].join("\n");
       await sendMessage(chatId, reply, "markdown");
       return;
     }

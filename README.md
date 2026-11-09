@@ -93,6 +93,7 @@ npm run dev
 - `/addadmin`: (Chỉ dành riêng cho Chủ sở hữu) Gán quyền Quản trị viên cho người dùng (hoặc `/addadmin <ID>`, tag @Tên hoặc Reply tin nhắn).
 - `/removeadmin`: (Chỉ dành riêng cho Chủ sở hữu) Xóa quyền Quản trị viên của người dùng (hoặc `/removeadmin <ID>`, tag @Tên hoặc Reply).
 - `/adminlist`: (Quản trị viên & Chủ sở hữu) Xem danh sách phân quyền Quản trị viên và Chủ sở hữu hiện tại.
+- `/send <ID_Nhóm> <Nội dung>`: (Quản trị viên) Điều khiển Bot thay mặt bạn gửi tin nhắn hoặc hình ảnh vào bất kỳ nhóm chat nào từ xa.
 - `/summary` (hoặc `@Bot tóm tắt`): Yêu cầu Bot tóm tắt cuộc thảo luận gần nhất trong nhóm, các quyết định và việc cần làm.
 - **Tự động phản hồi tin nhắn vi phạm**: Tự động phát hiện và phản ứng tức thì khi có thành viên gửi các tin nhắn phân biệt/miệt thị vùng miền (ví dụ: *Sv 37, sv37, súc vật 37, súc vật nghệ an, sv 36...*) trong nhóm mà không cần gọi hay tag Bot.
 - **Gửi ảnh kèm câu hỏi**: Gửi hình bài viết, hóa đơn, bảng báo giá để Bot đọc và phân tích chi tiết.
