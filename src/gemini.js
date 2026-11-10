@@ -364,14 +364,13 @@ function maskKey(key) {
  * Danh sách model ưu tiên có tốc độ phản hồi nhanh nhất, ổn định và dữ liệu mới nhất (2026)
  */
 function getCandidateModels() {
-  const primary = config.geminiModel || "gemini-flash-lite-latest";
   return [
     ...new Set(
       [
-        primary,
-        "gemini-flash-lite-latest", // Phản hồi siêu tốc ~1s, cực nhẹ, chuẩn xác
-        "gemini-3.1-flash-lite", // Tốc độ nhanh ~1s
-        "gemini-3.6-flash", // Dự phòng chất lượng cao
+        "gemini-flash-lite-latest", // Ưu tiên số 1: Phản hồi siêu tốc ~1s, cực nhẹ, chuẩn xác
+        "gemini-3.1-flash-lite", // Ưu tiên số 2: Tốc độ cao ~1s
+        config.geminiModel, // Cấu hình tuỳ chọn từ biến môi trường
+        "gemini-3.6-flash", // Dự phòng mô hình lớn
         "gemini-3.5-flash-lite", // Dự phòng
         "gemini-flash-latest", // Dự phòng ổn định
       ].filter(Boolean),
