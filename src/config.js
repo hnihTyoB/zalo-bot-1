@@ -20,7 +20,7 @@ const config = {
   zaloBotToken: process.env.ZALO_BOT_TOKEN,
   geminiApiKey: geminiApiKeys[0] || process.env.GEMINI_API_KEY || '',
   geminiApiKeys: geminiApiKeys,
-  geminiModel: process.env.GEMINI_MODEL || 'gemini-flash-latest',
+  geminiModel: process.env.GEMINI_MODEL || 'gemini-flash-lite-latest',
   webhookSecretToken: process.env.WEBHOOK_SECRET_TOKEN || 'htd_secret_token_2026_secure',
   zaloApiBaseUrl: 'https://bot-api.zaloplatforms.com',
   ownerId: ownerId.trim(),

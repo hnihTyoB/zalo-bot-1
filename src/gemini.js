@@ -50,7 +50,7 @@ QUY TẮC TRẢ LỜI THÔNG THƯỜNG:
 1. Luôn hoàn thành trọn vẹn câu trả lời và ý diễn đạt, tuyệt đối không dừng lấp lửng giữa chừng. Phản hồi hoàn toàn bằng tiếng Việt tự nhiên, rõ ràng, gãy gọn và hòa nhã.
 2. Có thể sử dụng định dạng Markdown nhẹ nhàng như in đậm (**từ khóa**), in nghiêng (*lưu ý*), danh sách gạch đầu dòng (- ý chính) để tin nhắn dễ đọc trên điện thoại.
 3. Không lạm dụng định dạng quá phức tạp hoặc bảng biểu lớn vì màn hình Zalo di động nhỏ.
-4. Trả lời súc tích, đi thẳng vào vấn đề. Nếu câu hỏi yêu cầu giải thích dài, hãy tóm tắt các ý chính trước.`;
+4. Phản hồi nhanh chóng, ngắn gọn, súc tích và đi thẳng vào trọng tâm. Tuyệt đối không rào trước đón sau dài dòng, không lặp lại câu hỏi của người dùng. Nếu câu hỏi yêu cầu giải thích dài, hãy tóm tắt các ý chính trước.`;
 
 /**
  * Tạo System Instruction động kèm mốc thời gian thực hiện tại của hệ thống (GMT+7)
@@ -119,15 +119,34 @@ QUY TẮC BẮT BUỘC VỀ ĐÍNH CHÍNH & CẬP NHẬT THÔNG TIN:
  */
 function shouldSearchWeb(text) {
   const t = (text || "").trim().toLowerCase();
-  if (t.length < 3) return false;
-  const ignorePatterns = [
-    /^(chào|alo|hello|hi|hey|ê|hế lô|hé lô)(?:\s+bot)?$/i,
-    /^(cảm ơn|cam on|thanks|thank you|tks)(?:\s+bot)?$/i,
-    /^(tạm biệt|bye|bai|goodbye)(?:\s+bot)?$/i,
+  if (t.length < 4) return false;
+
+  // 1. Loại bỏ các câu giao tiếp cơ bản, tính toán, tâm sự, dịch thuật, định nghĩa chung chung...
+  const nonSearchPatterns = [
+    /^(chào|alo|hello|hi|hey|ê|hế lô|hé lô|hí)(?:\s+.*)?$/i,
+    /^(cảm ơn|cam on|thanks|thank you|tks)(?:\s+.*)?$/i,
+    /^(tạm biệt|bye|bai|goodbye)(?:\s+.*)?$/i,
     /^(ok|oke|okie|được|rồi|uh|ừ|dạ|vâng)$/i,
+    /^(viết|soạn|làm thơ|kể chuyện|hát|đố|dịch|giải thích|phân tích|tính|code|lập trình)\b/i,
+    /^(tôi|mình|em|anh|chị)\s+(buồn|vui|mệt|chán|đói|ngủ)/i,
+    /bạn là ai|mày là ai|bot tên gì|bot là ai|ai tạo ra|giới thiệu/i,
+    /stk|số tài khoản|chuyển khoản|bank/i,
   ];
-  if (ignorePatterns.some((p) => p.test(t))) return false;
-  return true;
+  if (nonSearchPatterns.some((p) => p.test(t))) return false;
+
+  // 2. Chỉ tìm kiếm khi có từ khóa thời gian thực, sự kiện thời sự mới, tỷ giá, thể thao, nhân sự đương nhiệm...
+  const searchTriggers = [
+    /\b(?:hôm nay|ngày mai|hôm qua|hiện nay|hiện tại|bây giờ|gần đây|mới nhất|vừa qua|năm 2026|năm 2025)\b/i,
+    /\b(?:ai đang là|ai là đương nhiệm|đương nhiệm|chức vụ hiện tại)\b/i,
+    /\b(?:thời sự|tin tức|bản tin|vừa xảy ra|sự kiện)\b/i,
+    /\b(?:thời tiết|nhiệt độ|dự báo thời tiết)\b/i,
+    /\b(?:giá vàng|giá xăng|giá dầu|giá usd|tỷ giá|chứng khoán|vnindex)\b/i,
+    /\b(?:kết quả bóng đá|bảng xếp hạng|tỉ số|lịch thi đấu)\b/i,
+    /\b(?:tra cứu|tìm kiếm|google|search|tin mới)\b/i,
+    /\b(?:sáp nhập|tỉnh nào mới|huyện nào mới)\b/i,
+  ];
+
+  return searchTriggers.some((p) => p.test(t));
 }
 
 /**
@@ -170,7 +189,7 @@ async function searchWebRealtime(query) {
           headers: {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
           },
-          signal: AbortSignal.timeout(3000),
+          signal: AbortSignal.timeout(1800),
         });
         if (sRes.ok) {
           const sData = await sRes.json();
@@ -181,7 +200,7 @@ async function searchWebRealtime(query) {
               headers: {
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
               },
-              signal: AbortSignal.timeout(3000),
+              signal: AbortSignal.timeout(1800),
             });
             if (eRes.ok) {
               const eData = await eRes.json();
@@ -206,7 +225,7 @@ async function searchWebRealtime(query) {
             "User-Agent":
               "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
           },
-          signal: AbortSignal.timeout(3000),
+          signal: AbortSignal.timeout(1800),
         });
 
         if (res.ok) {
@@ -247,7 +266,7 @@ async function searchWebRealtime(query) {
         "User-Agent":
           "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
       },
-      signal: AbortSignal.timeout(3000),
+      signal: AbortSignal.timeout(1800),
     });
 
     if (res.ok) {
@@ -345,18 +364,16 @@ function maskKey(key) {
  * Danh sách model ưu tiên có tốc độ phản hồi nhanh nhất, ổn định và dữ liệu mới nhất (2026)
  */
 function getCandidateModels() {
-  const primary = config.geminiModel || "gemini-3.6-flash";
+  const primary = config.geminiModel || "gemini-flash-lite-latest";
   return [
     ...new Set(
       [
         primary,
-        "gemini-3.6-flash", // Cập nhật kiến thức 2026, phản hồi siêu tốc & ổn định
-        "gemini-flash-lite-latest", // Cập nhật kiến thức 2026, cực kỳ nhẹ và nhanh
-        "gemini-3.8-flash", // Bản cao nhất
-        "gemini-3.7-flash", // Dự phòng
-        "gemini-3.5-flash", // Dự phòng
-        "gemini-flash-latest", // Bản ổn định
-        "gemini-3.1-flash-lite", // Dự phòng cuối
+        "gemini-flash-lite-latest", // Phản hồi siêu tốc ~1s, cực nhẹ, chuẩn xác
+        "gemini-3.1-flash-lite", // Tốc độ nhanh ~1s
+        "gemini-3.6-flash", // Dự phòng chất lượng cao
+        "gemini-3.5-flash-lite", // Dự phòng
+        "gemini-flash-latest", // Dự phòng ổn định
       ].filter(Boolean),
     ),
   ];
@@ -392,7 +409,9 @@ async function executeGeminiRequest(payloadBuilder) {
           console.warn(
             `⚠️ [Model: ${model} | Key: ${keyLabel}] Lỗi ${response.status}: ${errorText.slice(0, 100)}`,
           );
-          markCooldown(model, apiKey, 60000);
+          // 403 (quá hạn/bị từ chối) thì cooldown 1 giờ, lỗi khác 60s
+          const cooldownDuration = response.status === 403 ? 3600000 : 60000;
+          markCooldown(model, apiKey, cooldownDuration);
           continue;
         }
 
@@ -499,7 +518,7 @@ async function askGemini(
     safetySettings: SAFETY_SETTINGS,
     generationConfig: {
       temperature: 0.7,
-      maxOutputTokens: 8192,
+      maxOutputTokens: 2048,
     },
   };
 
