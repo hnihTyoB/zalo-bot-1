@@ -92,7 +92,8 @@ async function handleMessage(eventData) {
   const chatId = msg.chat?.id || msg.from?.id;
   const senderId = String(msg.from?.id || chatId || "");
   const senderName = msg.from?.display_name || "Bạn";
-  const chatType = msg.chat?.chat_type || "PRIVATE";
+  const rawChatType = String(msg.chat?.chat_type || "").toUpperCase();
+  const chatType = (rawChatType === "GROUP" || String(chatId).startsWith("zgr-")) ? "GROUP" : "PRIVATE";
   const isOwner = storage.isUserOwner(senderId);
   const isAdmin = await storage.isUserAdmin(senderId);
   const isBlocked = await storage.isUserBlocked(senderId);
@@ -399,6 +400,13 @@ async function handleMessage(eventData) {
       `🚨 [VÙNG MIỀN] Phát hiện phân biệt vùng miền từ ${senderName} (${senderId}) tại [${chatType} ${chatId}]: "${msg.text}"`,
     );
     await sendMessage(chatId, REGIONAL_DISCRIMINATION_REPLY);
+    return;
+  }
+
+  // Nếu người dùng chỉ gọi/tag Bot mà không gửi kèm câu hỏi nào
+  if (!rawText) {
+    const reply = `Xin chào **${senderName}**! 👋 Tôi là **Bot HTD Media**.\nTôi có thể giúp gì cho bạn? Hãy gõ câu hỏi hoặc \`/help\` để xem danh sách tính năng nhé!`;
+    await sendMessage(chatId, reply, "markdown");
     return;
   }
 
