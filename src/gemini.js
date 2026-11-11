@@ -125,34 +125,87 @@ QUY TẮC BẮT BUỘC VỀ ĐÍNH CHÍNH & CẬP NHẬT THÔNG TIN:
  */
 function shouldSearchWeb(text) {
   const t = (text || "").trim().toLowerCase();
-  if (t.length < 4) return false;
+  if (t.length < 3) return false;
 
   // 1. Loại bỏ các câu giao tiếp cơ bản, tính toán, tâm sự, dịch thuật, định nghĩa chung chung...
   const nonSearchPatterns = [
-    /^(chào|alo|hello|hi|hey|ê|hế lô|hé lô|hí)(?:\s+.*)?$/i,
-    /^(cảm ơn|cam on|thanks|thank you|tks)(?:\s+.*)?$/i,
-    /^(tạm biệt|bye|bai|goodbye)(?:\s+.*)?$/i,
-    /^(ok|oke|okie|được|rồi|uh|ừ|dạ|vâng)$/i,
-    /^(viết|soạn|làm thơ|kể chuyện|hát|đố|dịch|giải thích|phân tích|tính|code|lập trình)\b/i,
-    /^(tôi|mình|em|anh|chị)\s+(buồn|vui|mệt|chán|đói|ngủ)/i,
-    /bạn là ai|mày là ai|bot tên gì|bot là ai|ai tạo ra|giới thiệu/i,
-    /stk|số tài khoản|chuyển khoản|bank/i,
+    /^(?:chào|alo|hello|hi|hey|ê|hế lô|hé lô|hí|yo|ola)(?:\s+.*)?$/i,
+    /^(?:cảm ơn|cam on|thanks|thank you|tks|cmon)(?:\s+.*)?$/i,
+    /^(?:tạm biệt|bye|bai|goodbye|g9|ngủ ngon)(?:\s+.*)?$/i,
+    /^(?:ok|oke|okie|được|rồi|uh|ừ|dạ|vâng|chuẩn|hay|tuyệt)$/i,
+    /^(?:viết|soạn|làm thơ|kể chuyện|hát|đố|dịch|giải thích|phân tích|tính|code|lập trình)\b/i,
+    /^(?:tôi|mình|em|anh|chị)\s+(?:buồn|vui|mệt|chán|đói|ngủ|buồn ngủ)/i,
+    /bạn là ai|mày là ai|bot tên gì|bot là ai|ai tạo ra|giới thiệu về bạn|bạn làm được gì/i,
+    /stk|số tài khoản|chuyển khoản|bank|sacombank/i,
   ];
   if (nonSearchPatterns.some((p) => p.test(t))) return false;
 
-  // 2. Chỉ tìm kiếm khi có từ khóa thời gian thực, sự kiện thời sự mới, tỷ giá, thể thao, nhân sự đương nhiệm...
-  const searchTriggers = [
-    /\b(?:hôm nay|ngày mai|hôm qua|hiện nay|hiện tại|bây giờ|gần đây|mới nhất|vừa qua|năm 2026|năm 2025)\b/i,
-    /\b(?:ai đang là|ai là đương nhiệm|đương nhiệm|chức vụ hiện tại)\b/i,
-    /\b(?:thời sự|tin tức|bản tin|vừa xảy ra|sự kiện)\b/i,
-    /\b(?:thời tiết|nhiệt độ|dự báo thời tiết)\b/i,
-    /\b(?:giá vàng|giá xăng|giá dầu|giá usd|tỷ giá|chứng khoán|vnindex)\b/i,
-    /\b(?:kết quả bóng đá|bảng xếp hạng|tỉ số|lịch thi đấu)\b/i,
-    /\b(?:tra cứu|tìm kiếm|google|search|tin mới)\b/i,
-    /\b(?:sáp nhập|tỉnh nào mới|huyện nào mới)\b/i,
+  // 2. Kích hoạt tìm kiếm web dựa trên từ khóa và ngữ cảnh thực tế (hỗ trợ đầy đủ tiếng Việt có dấu):
+  const searchKeywords = [
+    // Thời gian, thời sự, cập nhật mới:
+    "hôm nay", "ngày mai", "hôm qua", "tuần này", "tháng này", "năm nay",
+    "hiện nay", "hiện tại", "bây giờ", "gần đây", "mới nhất", "vừa qua", "vừa rồi", "sắp tới",
+    "2024", "2025", "2026", "2027",
+    "thời sự", "tin tức", "bản tin", "sự kiện", "tin mới", "drama", "scandal", "vụ việc", "trend", "hot", "latest", "news",
+
+    // Phim ảnh, anime, manga, series, game, giải trí:
+    "phim", "anime", "manga", "webtoon", "truyện", "game", "series", "bộ phim", "tập phim", "chiếu rạp",
+    "trailer", "teaser", "remake", "sequel", "reboot", "live-action", "ova", "movie",
+    "ca khúc", "bài hát", "album", "mv", "ca sĩ", "diễn viên", "đạo diễn", "tác giả", "nsx", "nhạc sĩ",
+
+    // Trạng thái phát hành, ra mắt, lịch chiếu:
+    "ra chưa", "có chưa", "chiếu chưa", "xem được chưa", "phát sóng chưa", "quay xong chưa", "ra mắt chưa", "có tin gì",
+    "khi nào ra", "bao giờ ra", "khi nào chiếu", "bao giờ chiếu", "lịch chiếu", "lịch phát sóng", "ngày phát hành", "release date",
+    "có phần", "có mùa", "có làm", "có ra", "chuẩn bị ra", "sắp ra", "mới ra", "sắp chiếu", "đang chiếu", "vừa ra",
+    "phần tiếp", "phần sau", "mùa sau", "tập tiếp", "phần mới", "mùa mới",
+    "bản cập nhật", "update", "patch", "dlc",
+
+    // Nhân vật, chính trị, lãnh đạo, chức vụ:
+    "ai là", "ai đang là", "là ai", "ai làm", "đương nhiệm", "chức vụ", "who is",
+    "chủ tịch", "thủ tướng", "tổng bí thư", "bộ trưởng", "thứ trưởng", "bí thư", "chủ tịch tỉnh", "thị trưởng", "tổng thống", "thống đốc",
+    "giám đốc", "ceo", "founder",
+    "hlv", "huấn luyện viên", "cầu thủ", "đội trưởng", "tiền đạo", "thủ môn",
+    "tiểu sử", "bao nhiêu tuổi", "sinh năm", "quê ở đâu", "quê quán",
+
+    // Thể thao, bóng đá:
+    "bóng đá", "kết quả", "bảng xếp hạng", "tỉ số", "lịch thi đấu", "trận đấu", "đội hình", "đá bóng", "thi đấu", "scores", "standings",
+    "cúp c1", "champions league", "ngoại hạng anh", "premier league", "la liga", "serie a", "bundesliga", "v-league",
+    "world cup", "euro", "asian cup", "aff cup", "sea games", "olympic", "vô địch",
+
+    // Kinh tế, giá cả, tài chính:
+    "giá vàng", "giá xăng", "giá dầu", "giá usd", "giá đô", "tỷ giá", "ngoại tệ",
+    "chứng khoán", "cổ phiếu", "vnindex", "vn-index", "crypto", "bitcoin", "btc", "eth",
+    "lãi suất", "ngân hàng", "lạm phát", "kinh tế",
+    "giá bao nhiêu", "bao nhiêu tiền", "bảng giá", "giá vé", "vé máy bay", "vé xem phim",
+
+    // Đời sống, thời tiết, xổ số:
+    "thời tiết", "nhiệt độ", "dự báo thời tiết", "mưa", "bão", "áp thấp", "lũ lụt",
+    "xổ số", "kqsx", "kqxs", "vietlott", "mega", "power", "trúng số",
+    "lịch âm", "ngày hoàng đạo", "ngày tốt", "giờ tốt", "tết",
+
+    // Công nghệ, xe cộ:
+    "iphone", "ipad", "macbook", "samsung", "galaxy", "xiaomi", "oppo", "vivo", "pixel",
+    "rtx", "gtx", "card đồ họa", "card màn hình", "snapdragon",
+    "vinfast", "toyota", "honda", "hyundai", "kia", "mazda", "ford", "tesla", "xe điện",
+    "thông số", "cấu hình", "đánh giá", "review", "so sánh", "mở hộp",
+
+    // Địa lý, pháp luật, tra cứu:
+    "sáp nhập", "tỉnh nào mới", "huyện nào mới", "xã nào mới", "luật mới", "nghị định", "thông tư", "quy định mới", "mức phạt",
+    "tra cứu", "tìm kiếm", "google", "search", "kiểm tra", "xem hộ", "tìm hộ",
+    "thực hư", "có thật không", "đúng không", "phải không", "tin đồn", "sự thật",
+    "khi nào", "bao giờ", "ở đâu", "tại sao lại", "chuyện gì", "thế nào rồi", "when is", "what is", "is there"
   ];
 
-  return searchTriggers.some((p) => p.test(t));
+  if (searchKeywords.some((kw) => t.includes(kw))) {
+    return true;
+  }
+
+  // Regex phát hiện phần/tập/mùa có số: "phần 2", "season 2", "ss3", "tập 10", "chap 1130"
+  if (/(?:phần|season|ss|mùa|tập|chap|chapter|vol|volume)\s*\d+/i.test(t)) {
+    return true;
+  }
+
+  return false;
 }
 
 /**
