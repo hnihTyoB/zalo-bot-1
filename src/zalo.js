@@ -52,19 +52,18 @@ async function sendChatAction(chatId, action = 'typing') {
 }
 
 /**
- * Gửi tin nhắn văn bản đến người dùng hoặc nhóm
- * @param {string} chatId
+ * Chuyển đổi định dạng Markdown sang HTML chuẩn được Zalo Bot API hỗ trợ (<b>, <i>, <s>, <code>, <pre>),
+ * đồng thời bảo vệ tuyệt đối các đường link URL (kể cả có chứa ký tự gạch dưới '_')
+ * không bao giờ bị Zalo nuốt mất hay biến dạng.
  * @param {string} text
- * @param {'markdown'|'html'|null} parseMode
+ * @returns {string}
  */
-async function sendMessage(chatId, text, parseMode = 'markdown') {
-  // Giới hạn Zalo là 2000 ký tự. Cắt nhỏ nếu quá dài
-  const MAX_LEN = 1900;
-  let cleanText = String(text || '').trim();
+function formatMarkdownToZaloHtml(text) {
+  if (!text) return '';
+  let str = String(text).trim();
 
-  // 1. Chuyển đổi mọi cú pháp Markdown Link [label](url) hoặc [url](url) thành bare URL
-  // Zalo không hỗ trợ cú pháp [text](url) - nếu để nguyên sẽ hiển thị dấu ngoặc xấu và dễ bị lỗi click
-  cleanText = cleanText.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (match, label, url) => {
+  // 1. Chuyển đổi mọi cú pháp Markdown link [label](url) hoặc [url](url) thành bare URL
+  str = str.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (match, label, url) => {
     const cleanLabel = label.trim();
     const cleanUrl = url.trim();
     if (cleanLabel === cleanUrl || cleanLabel.startsWith('http') || /^(?:link|xem|tại đây|here|click|watch)\b/i.test(cleanLabel)) {
@@ -72,36 +71,123 @@ async function sendMessage(chatId, text, parseMode = 'markdown') {
     }
     return `${cleanLabel}: ${cleanUrl}`;
   });
+  str = str.replace(/\[(https?:\/\/[^\s\]]+)\]/g, '$1');
+  str = str.replace(/\((https?:\/\/[^\s)]+)\)/g, ' $1 ');
 
-  // 2. Gỡ bỏ ngoặc vuông/ngoặc đơn thừa bao quanh URL: [https://...] hoặc (https://...)
-  cleanText = cleanText.replace(/\[(https?:\/\/[^\s\]]+)\]/g, '$1');
-  cleanText = cleanText.replace(/\((https?:\/\/[^\s)]+)\)/g, ' $1 ');
+  // 2. Bảo vệ code blocks, inline code và URLs bằng placeholder
+  const placeholders = [];
+  const protect = (val) => {
+    const key = `___PROTECTED_${placeholders.length}___`;
+    placeholders.push({ key, value: val });
+    return key;
+  };
 
-  // 3. Nếu tin nhắn chứa URL có ký tự gạch dưới '_' (như link video YouTube: _ClZtV_Rro0):
-  // BẮT BUỘC tắt parseMode (gửi plain text) vì trình phân tích Markdown của Zalo Server
-  // sẽ coi cặp dấu '_' trong URL là thẻ in nghiêng và xóa mất dấu gạch dưới, làm hỏng hoàn toàn URL (thành ClZtVRro0 -> 404).
-  const isPureUrl = /^https?:\/\/[^\s]+$/i.test(cleanText);
-  const containsUnderscoreUrl = /https?:\/\/[^\s]*_[^\s]*/i.test(cleanText);
+  // Bảo vệ code blocks ```...```
+  str = str.replace(/```[\s\S]*?```/g, (match) => {
+    const code = match.replace(/^```[^\n]*\n?/, '').replace(/```$/, '');
+    const escaped = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return protect(`<pre><code>${escaped}</code></pre>`);
+  });
+
+  // Bảo vệ inline code `...`
+  str = str.replace(/`([^`]+)`/g, (match, code) => {
+    const escaped = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return protect(`<code>${escaped}</code>`);
+  });
+
+  // Bảo vệ URLs
+  str = str.replace(/https?:\/\/[^\s<>"'`]+/g, (match) => protect(match));
+
+  // 3. Escape HTML entities cho nội dung thông thường
+  str = str.replace(/&/g, '&amp;');
+  str = str.replace(/</g, '&lt;');
+  str = str.replace(/>/g, '&gt;');
+
+  // 4. Chuyển đổi các thẻ Markdown sang HTML tags
+  // In đậm: **text** hoặc __text__
+  str = str.replace(/\*\*([^*\n]+)\*\*/g, '<b>$1</b>');
+  str = str.replace(/__([^_\n]+)__/g, '<b>$1</b>');
+
+  // In nghiêng: *text* hoặc _text_ (có khoảng trắng hoặc ranh giới từ bao quanh)
+  str = str.replace(/(^|[^\*])\*([^\*\n]+)\*([^\*]|$)/g, '$1<i>$2</i>$3');
+  str = str.replace(/(^|[^a-zA-Z0-9])_([^_ \n][^_\n]*[^_ \n])_([^a-zA-Z0-9]|$)/g, '$1<i>$2</i>$3');
+
+  // Gạch ngang: ~~text~~
+  str = str.replace(/~~([^~\n]+)~~/g, '<s>$1</s>');
+
+  // 5. Khôi phục lại các nội dung đã bảo vệ (URLs, code blocks)
+  for (const { key, value } of placeholders) {
+    str = str.replace(key, value);
+  }
+
+  return str;
+}
+
+/**
+ * Gửi tin nhắn văn bản đến người dùng hoặc nhóm
+ * @param {string} chatId
+ * @param {string} text
+ * @param {'markdown'|'html'|null} parseMode
+ */
+async function sendMessage(chatId, text, parseMode = 'markdown') {
+  const MAX_LEN = 1900;
+  const rawText = String(text || '').trim();
+  if (!rawText) return null;
 
   let effectiveParseMode = parseMode;
-  if (isPureUrl || containsUnderscoreUrl) {
+  let processedText = rawText;
+
+  // Nếu parseMode là 'markdown', tự động chuyển đổi sang HTML để Zalo in đậm, in nghiêng chuẩn 100%
+  // đồng thời bảo toàn nguyên vẹn mọi đường link URL (kể cả có chứa ký tự gạch dưới '_')
+  if (parseMode === 'markdown') {
+    processedText = formatMarkdownToZaloHtml(rawText);
+    effectiveParseMode = 'html';
+  }
+
+  // Nếu chỉ là URL thuần túy, gửi dạng text không cần parse_mode
+  if (/^https?:\/\/[^\s]+$/i.test(processedText)) {
     effectiveParseMode = null;
   }
 
-  if (cleanText.length <= MAX_LEN) {
+  // Hàm thực thi gửi với cơ chế tự động fallback nếu parse_mode bị Zalo từ chối
+  const doSend = async (content, mode) => {
     const payload = {
       chat_id: String(chatId),
-      text: cleanText
+      text: content
     };
-    if (effectiveParseMode) {
-      payload.parse_mode = effectiveParseMode;
+    if (mode) {
+      payload.parse_mode = mode;
     }
-    return await callApi('sendMessage', payload);
+
+    try {
+      const res = await callApi('sendMessage', payload);
+      // Nếu gửi với parse_mode bị lỗi cú pháp, tự động gửi lại bằng plain text để đảm bảo tin nhắn không bao giờ bị mất
+      if (!res?.ok && mode) {
+        console.warn(`⚠️ Gửi parse_mode=${mode} không thành công, đang fallback về plain text:`, res?.description);
+        return await callApi('sendMessage', {
+          chat_id: String(chatId),
+          text: rawText
+        });
+      }
+      return res;
+    } catch (err) {
+      if (mode) {
+        return await callApi('sendMessage', {
+          chat_id: String(chatId),
+          text: rawText
+        }).catch(() => null);
+      }
+      throw err;
+    }
+  };
+
+  if (processedText.length <= MAX_LEN) {
+    return await doSend(processedText, effectiveParseMode);
   }
 
   // Nếu tin nhắn dài hơn 1900 ký tự, tách theo dòng hoặc đoạn
   const chunks = [];
-  let remaining = cleanText;
+  let remaining = processedText;
   while (remaining.length > 0) {
     if (remaining.length <= MAX_LEN) {
       chunks.push(remaining);
@@ -118,12 +204,7 @@ async function sendMessage(chatId, text, parseMode = 'markdown') {
 
   let lastRes = null;
   for (const chunk of chunks) {
-    const payload = {
-      chat_id: String(chatId),
-      text: chunk
-    };
-    if (effectiveParseMode) payload.parse_mode = effectiveParseMode;
-    lastRes = await callApi('sendMessage', payload);
+    lastRes = await doSend(chunk, effectiveParseMode);
   }
   return lastRes;
 }
