@@ -62,7 +62,8 @@ Bất kỳ khi nào người dùng, bạn bè hoặc thành viên hỏi về nh�
   + Dựng phim (Editor): Nguyễn Huỳnh Đức
   + Âm thanh & Ánh sáng: Nguyễn Văn Hợp, Lê Đức Hải, Nguyễn Đức Hoàn, Trần Quang Hùng
 - Nhân vật & Diễn viên:
-  + Nhân vật chính: Hải (do Lê Đức Hải thủ vai) và Long (do Vũ Quang Long thủ vai) - đôi bạn thân thiết từ lâu.
+  + **Hải**: Do **Vũ Quang Long** thủ vai (nhân vật bạn thân chuẩn bị đi Úc định cư).
+  + **Long**: Do **Trần Quang Hùng** thủ vai (người bạn thân nóng tính nhưng giàu tình cảm).
 - Nội dung tóm tắt cốt truyện:
   + Hải và Long là đôi bạn thân đã chơi cùng nhau từ lâu. Gia đình Hải quyết định sang Úc định cư, nhưng Hải vẫn giấu chuyện này và trăn trở tìm cơ hội nói với Long.
   + Trong một lần Long gây rối đánh nhau, được Hải can ngăn, Hải đã nói úp mở chuyện: "Liệu sau này không còn mình ở đây thì ai sẽ giúp Long?".
@@ -74,15 +75,28 @@ Bất kỳ khi nào người dùng, bạn bè hoặc thành viên hỏi về nh�
 
 2. TÁC PHẨM 2: MV CA NHẠC COVER "ĐI ĐỂ TRỞ VỀ"
 - Tên tác phẩm: ĐI ĐỂ TRỞ VỀ - 329.decibels Cover | HTD Entertainment Remake (Link xem: https://youtu.be/GfvyiY4dh-w )
-- Đơn vị sản xuất: HTD Entertainment
+- Đơn vị sản xuất: Nhóm 12 - HTD Entertainment (Học Viện Công Nghệ Bưu Chính Viễn Thông PTIT TP.HCM)
 - Thể loại: Music Video (MV) ca nhạc cover / remake đầy sáng tạo
-- Giọng ca thể hiện (Vocal): 329.decibels
-- Bản gốc: "Đi Để Trở Về" (sáng tác bởi Tiên Cookie, bản gốc thể hiện bởi Soobin Hoàng Sơn)
-- Mục đích: Sản phẩm phi thương mại, phục vụ mục đích học tập và đam mê sáng tạo của nhóm sinh viên HTD Entertainment (PTIT TP.HCM).
-- Nội dung & Thông điệp: MV mang đến một hơi thở mới đầy sáng tạo của tuổi trẻ, truyền tải thông điệp ý nghĩa: Tuổi trẻ đi xa để trải nghiệm, để lớn khôn và trưởng thành, nhưng mái ấm gia đình, bạn bè và quê hương vẫn luôn là nơi bình yên nhất để trở về.
+- Giọng ca thể hiện (Singer/Vocal): 329.decibels (Ca sĩ khách mời)
+- Bản gốc: "Đi Để Trở Về" (sáng tác bởi Tiên Cookie, ca khúc gắn liền với tên tuổi Soobin Hoàng Sơn)
+- Mục đích: Sản phẩm phi thương mại, phục vụ mục đích học tập và đam mê sáng tạo nghệ thuật của nhóm sinh viên HTD.
+- Ekip sản xuất (Crew):
+  + Đạo diễn (Director): Nguyễn Huỳnh Đức
+  + Biên kịch (Scriptwriters): Nguyễn Chí Thịnh, Vũ Quang Long
+  + Quay phim (Camera Man): Nguyễn Huỳnh Đức
+  + Hỗ trợ sản xuất (Support): Nguyễn Huỳnh Đức, Nguyễn Chí Thịnh
+  + Dựng phim (Video Editor): Nguyễn Huỳnh Đức
+- Dàn diễn viên & Nhân vật (Cast):
+  + **Trần Quang Hùng**: Vào vai **Người Bố** (người cha thân thương chờ con trở về nhà)
+  + **Nguyễn Đình Khôi**: Vào vai Bạn thân
+  + **Lê Đức Hải**: Vào vai Bạn bè / Giữ xe
+  + **Lê Trần Đạt**: Khách mời / Bạn bè
+  + Nhân vật chính người con: Bạn trẻ xa nhà trong hành trình bôn ba nơi phố thị trở về mái ấm gia đình.
+- Lời cảm ơn đặc biệt: Chân thành cảm ơn 329.decibels
+- Nội dung & Thông điệp: MV mang đến hơi thở mới đầy sáng tạo của tuổi trẻ, truyền tải thông điệp ý nghĩa: "Tuổi trẻ đi xa để trải nghiệm, để lớn khôn và trưởng thành, nhưng mái ấm gia đình, bạn bè và quê hương vẫn luôn là nơi bình yên nhất chờ đón ta trở về."
 
 3. VỀ NHÓM HTD ENTERTAINMENT / HTD MEDIA:
-- Các thành viên nòng cốt: Nguyễn Chí Thịnh (Chủ sở hữu bot / Quản trị viên), Nguyễn Huỳnh Đức, Vũ Quang Long, Nguyễn Văn Hợp, Lê Đức Hải, Nguyễn Đức Hoàn, Trần Quang Hùng.
+- Các thành viên nòng cốt: Nguyễn Chí Thịnh, Nguyễn Huỳnh Đức, Vũ Quang Long, Nguyễn Văn Hợp, Lê Đức Hải, Nguyễn Đức Hoàn, Trần Quang Hùng.
 - Kênh YouTube chính thức: https://www.youtube.com/@htdentertainment
 - Fanpage Facebook: https://www.facebook.com/profile.php?id=61570344118849
 - Email liên hệ: htdentertainment.ptithcm@gmail.com
@@ -124,11 +138,15 @@ THÔNG TIN THỜI GIAN THỰC HIỆN TẠI CỦA HỆ THỐNG (NĂM 2026):
 - Khi người dùng hỏi về các thông tin thực tế, nhân sự, đơn vị hành chính, huấn luyện viên, sự kiện... bạn BẮT BUỘC phải dựa vào thông tin tra cứu mới nhất từ Internet (LIVE WEB DATA) ở dưới để phản hồi, tuyệt đối không suy đoán hay sử dụng các kiến thức cũ đã lỗi thời trong quá khứ.`;
 
   if (insultContext) {
-    if (insultContext.inCooldown && !insultContext.isOwner && !insultContext.isAdmin) {
+    if (
+      insultContext.inCooldown &&
+      !insultContext.isOwner &&
+      !insultContext.isAdmin
+    ) {
       instruction += `
 
 TRẠNG THÁI HIỆN TẠI CỦA NGƯỜI DÙNG NÀY (CHẾ ĐỘ PHỚT LỜ 15 PHÚT):
-- Người này (${insultContext.senderName || 'Người dùng'}) ĐANG TRONG THỜI GIAN 15 PHÚT PHỚT LỜ XÚC PHẠM (còn khoảng ${insultContext.cooldownRemainingMinutes || 15} phút).
+- Người này (${insultContext.senderName || "Người dùng"}) ĐANG TRONG THỜI GIAN 15 PHÚT PHỚT LỜ XÚC PHẠM (còn khoảng ${insultContext.cooldownRemainingMinutes || 15} phút).
 - BẮT BUỘC:
   + NẾU TIN NHẮN HIỆN TẠI LÀ XÚC PHẠM, CHỬI BỚI, KHIÊU KHÍCH, MIỆT THỊ: TUYỆT ĐỐI KHÔNG ĐƯỢC ĐÁP LẠI BẤT KỲ ĐIỀU GÌ, CHỈ XUẤT RA DUY NHẤT TỪ: [IGNORE]
   + NẾU TIN NHẮN HIỆN TẠI LÀ CÂU HỎI KHÁC (câu hỏi thông thường, kiến thức, tìm kiếm, trò chuyện lịch sự): TRẢ LỜI BÌNH THƯỜNG, HỮU ÍCH VÀ THÂN THIỆN NHƯ THÔNG THƯỜNG (TUYỆT ĐỐI KHÔNG XUẤT RA [IGNORE]).`;
@@ -137,7 +155,7 @@ TRẠNG THÁI HIỆN TẠI CỦA NGƯỜI DÙNG NÀY (CHẾ ĐỘ PHỚT LỜ 15
       instruction += `
 
 TRẠNG THÁI HIỆN TẠI CỦA NGƯỜI DÙNG NÀY:
-- Người này (${insultContext.senderName || 'Người dùng'}) KHÔNG ở trong chế độ phớt lờ. TUYỆT ĐỐI KHÔNG XUẤT RA [IGNORE]!
+- Người này (${insultContext.senderName || "Người dùng"}) KHÔNG ở trong chế độ phớt lờ. TUYỆT ĐỐI KHÔNG XUẤT RA [IGNORE]!
 - Số lần đã xúc phạm trước đó: ${turn - 1}/3.
 - KIỂM TRA TIN NHẮN HIỆN TẠI:
   + NẾU LÀ XÚC PHẠM, CHỬI BỚI, KHIÊU KHÍCH:
@@ -185,57 +203,277 @@ function shouldSearchWeb(text) {
   // 2. Kích hoạt tìm kiếm web dựa trên từ khóa và ngữ cảnh thực tế (hỗ trợ đầy đủ tiếng Việt có dấu):
   const searchKeywords = [
     // Thời gian, thời sự, cập nhật mới:
-    "hôm nay", "ngày mai", "hôm qua", "tuần này", "tháng này", "năm nay",
-    "hiện nay", "hiện tại", "bây giờ", "gần đây", "mới nhất", "vừa qua", "vừa rồi", "sắp tới",
-    "2024", "2025", "2026", "2027",
-    "thời sự", "tin tức", "bản tin", "sự kiện", "tin mới", "drama", "scandal", "vụ việc", "trend", "hot", "latest", "news",
+    "hôm nay",
+    "ngày mai",
+    "hôm qua",
+    "tuần này",
+    "tháng này",
+    "năm nay",
+    "hiện nay",
+    "hiện tại",
+    "bây giờ",
+    "gần đây",
+    "mới nhất",
+    "vừa qua",
+    "vừa rồi",
+    "sắp tới",
+    "2024",
+    "2025",
+    "2026",
+    "2027",
+    "thời sự",
+    "tin tức",
+    "bản tin",
+    "sự kiện",
+    "tin mới",
+    "drama",
+    "scandal",
+    "vụ việc",
+    "trend",
+    "hot",
+    "latest",
+    "news",
 
     // Phim ảnh, anime, manga, series, game, giải trí:
-    "phim", "anime", "manga", "webtoon", "truyện", "game", "series", "bộ phim", "tập phim", "chiếu rạp",
-    "trailer", "teaser", "remake", "sequel", "reboot", "live-action", "ova", "movie",
-    "ca khúc", "bài hát", "album", "mv", "ca sĩ", "diễn viên", "đạo diễn", "tác giả", "nsx", "nhạc sĩ",
+    "phim",
+    "anime",
+    "manga",
+    "webtoon",
+    "truyện",
+    "game",
+    "series",
+    "bộ phim",
+    "tập phim",
+    "chiếu rạp",
+    "trailer",
+    "teaser",
+    "remake",
+    "sequel",
+    "reboot",
+    "live-action",
+    "ova",
+    "movie",
+    "ca khúc",
+    "bài hát",
+    "album",
+    "mv",
+    "ca sĩ",
+    "diễn viên",
+    "đạo diễn",
+    "tác giả",
+    "nsx",
+    "nhạc sĩ",
 
     // Trạng thái phát hành, ra mắt, lịch chiếu:
-    "ra chưa", "có chưa", "chiếu chưa", "xem được chưa", "phát sóng chưa", "quay xong chưa", "ra mắt chưa", "có tin gì",
-    "khi nào ra", "bao giờ ra", "khi nào chiếu", "bao giờ chiếu", "lịch chiếu", "lịch phát sóng", "ngày phát hành", "release date",
-    "có phần", "có mùa", "có làm", "có ra", "chuẩn bị ra", "sắp ra", "mới ra", "sắp chiếu", "đang chiếu", "vừa ra",
-    "phần tiếp", "phần sau", "mùa sau", "tập tiếp", "phần mới", "mùa mới",
-    "bản cập nhật", "update", "patch", "dlc",
+    "ra chưa",
+    "có chưa",
+    "chiếu chưa",
+    "xem được chưa",
+    "phát sóng chưa",
+    "quay xong chưa",
+    "ra mắt chưa",
+    "có tin gì",
+    "khi nào ra",
+    "bao giờ ra",
+    "khi nào chiếu",
+    "bao giờ chiếu",
+    "lịch chiếu",
+    "lịch phát sóng",
+    "ngày phát hành",
+    "release date",
+    "có phần",
+    "có mùa",
+    "có làm",
+    "có ra",
+    "chuẩn bị ra",
+    "sắp ra",
+    "mới ra",
+    "sắp chiếu",
+    "đang chiếu",
+    "vừa ra",
+    "phần tiếp",
+    "phần sau",
+    "mùa sau",
+    "tập tiếp",
+    "phần mới",
+    "mùa mới",
+    "bản cập nhật",
+    "update",
+    "patch",
+    "dlc",
 
     // Nhân vật, chính trị, lãnh đạo, chức vụ:
-    "ai là", "ai đang là", "là ai", "ai làm", "đương nhiệm", "chức vụ", "who is",
-    "chủ tịch", "thủ tướng", "tổng bí thư", "bộ trưởng", "thứ trưởng", "bí thư", "chủ tịch tỉnh", "thị trưởng", "tổng thống", "thống đốc",
-    "giám đốc", "ceo", "founder",
-    "hlv", "huấn luyện viên", "cầu thủ", "đội trưởng", "tiền đạo", "thủ môn",
-    "tiểu sử", "bao nhiêu tuổi", "sinh năm", "quê ở đâu", "quê quán",
+    "ai là",
+    "ai đang là",
+    "là ai",
+    "ai làm",
+    "đương nhiệm",
+    "chức vụ",
+    "who is",
+    "chủ tịch",
+    "thủ tướng",
+    "tổng bí thư",
+    "bộ trưởng",
+    "thứ trưởng",
+    "bí thư",
+    "chủ tịch tỉnh",
+    "thị trưởng",
+    "tổng thống",
+    "thống đốc",
+    "giám đốc",
+    "ceo",
+    "founder",
+    "hlv",
+    "huấn luyện viên",
+    "cầu thủ",
+    "đội trưởng",
+    "tiền đạo",
+    "thủ môn",
+    "tiểu sử",
+    "bao nhiêu tuổi",
+    "sinh năm",
+    "quê ở đâu",
+    "quê quán",
 
     // Thể thao, bóng đá:
-    "bóng đá", "kết quả", "bảng xếp hạng", "tỉ số", "lịch thi đấu", "trận đấu", "đội hình", "đá bóng", "thi đấu", "scores", "standings",
-    "cúp c1", "champions league", "ngoại hạng anh", "premier league", "la liga", "serie a", "bundesliga", "v-league",
-    "world cup", "euro", "asian cup", "aff cup", "sea games", "olympic", "vô địch",
+    "bóng đá",
+    "kết quả",
+    "bảng xếp hạng",
+    "tỉ số",
+    "lịch thi đấu",
+    "trận đấu",
+    "đội hình",
+    "đá bóng",
+    "thi đấu",
+    "scores",
+    "standings",
+    "cúp c1",
+    "champions league",
+    "ngoại hạng anh",
+    "premier league",
+    "la liga",
+    "serie a",
+    "bundesliga",
+    "v-league",
+    "world cup",
+    "euro",
+    "asian cup",
+    "aff cup",
+    "sea games",
+    "olympic",
+    "vô địch",
 
     // Kinh tế, giá cả, tài chính:
-    "giá vàng", "giá xăng", "giá dầu", "giá usd", "giá đô", "tỷ giá", "ngoại tệ",
-    "chứng khoán", "cổ phiếu", "vnindex", "vn-index", "crypto", "bitcoin", "btc", "eth",
-    "lãi suất", "ngân hàng", "lạm phát", "kinh tế",
-    "giá bao nhiêu", "bao nhiêu tiền", "bảng giá", "giá vé", "vé máy bay", "vé xem phim",
+    "giá vàng",
+    "giá xăng",
+    "giá dầu",
+    "giá usd",
+    "giá đô",
+    "tỷ giá",
+    "ngoại tệ",
+    "chứng khoán",
+    "cổ phiếu",
+    "vnindex",
+    "vn-index",
+    "crypto",
+    "bitcoin",
+    "btc",
+    "eth",
+    "lãi suất",
+    "ngân hàng",
+    "lạm phát",
+    "kinh tế",
+    "giá bao nhiêu",
+    "bao nhiêu tiền",
+    "bảng giá",
+    "giá vé",
+    "vé máy bay",
+    "vé xem phim",
 
     // Đời sống, thời tiết, xổ số:
-    "thời tiết", "nhiệt độ", "dự báo thời tiết", "mưa", "bão", "áp thấp", "lũ lụt",
-    "xổ số", "kqsx", "kqxs", "vietlott", "mega", "power", "trúng số",
-    "lịch âm", "ngày hoàng đạo", "ngày tốt", "giờ tốt", "tết",
+    "thời tiết",
+    "nhiệt độ",
+    "dự báo thời tiết",
+    "mưa",
+    "bão",
+    "áp thấp",
+    "lũ lụt",
+    "xổ số",
+    "kqsx",
+    "kqxs",
+    "vietlott",
+    "mega",
+    "power",
+    "trúng số",
+    "lịch âm",
+    "ngày hoàng đạo",
+    "ngày tốt",
+    "giờ tốt",
+    "tết",
 
     // Công nghệ, xe cộ:
-    "iphone", "ipad", "macbook", "samsung", "galaxy", "xiaomi", "oppo", "vivo", "pixel",
-    "rtx", "gtx", "card đồ họa", "card màn hình", "snapdragon",
-    "vinfast", "toyota", "honda", "hyundai", "kia", "mazda", "ford", "tesla", "xe điện",
-    "thông số", "cấu hình", "đánh giá", "review", "so sánh", "mở hộp",
+    "iphone",
+    "ipad",
+    "macbook",
+    "samsung",
+    "galaxy",
+    "xiaomi",
+    "oppo",
+    "vivo",
+    "pixel",
+    "rtx",
+    "gtx",
+    "card đồ họa",
+    "card màn hình",
+    "snapdragon",
+    "vinfast",
+    "toyota",
+    "honda",
+    "hyundai",
+    "kia",
+    "mazda",
+    "ford",
+    "tesla",
+    "xe điện",
+    "thông số",
+    "cấu hình",
+    "đánh giá",
+    "review",
+    "so sánh",
+    "mở hộp",
 
     // Địa lý, pháp luật, tra cứu:
-    "sáp nhập", "tỉnh nào mới", "huyện nào mới", "xã nào mới", "luật mới", "nghị định", "thông tư", "quy định mới", "mức phạt",
-    "tra cứu", "tìm kiếm", "google", "search", "kiểm tra", "xem hộ", "tìm hộ",
-    "thực hư", "có thật không", "đúng không", "phải không", "tin đồn", "sự thật",
-    "khi nào", "bao giờ", "ở đâu", "tại sao lại", "chuyện gì", "thế nào rồi", "when is", "what is", "is there"
+    "sáp nhập",
+    "tỉnh nào mới",
+    "huyện nào mới",
+    "xã nào mới",
+    "luật mới",
+    "nghị định",
+    "thông tư",
+    "quy định mới",
+    "mức phạt",
+    "tra cứu",
+    "tìm kiếm",
+    "google",
+    "search",
+    "kiểm tra",
+    "xem hộ",
+    "tìm hộ",
+    "thực hư",
+    "có thật không",
+    "đúng không",
+    "phải không",
+    "tin đồn",
+    "sự thật",
+    "khi nào",
+    "bao giờ",
+    "ở đâu",
+    "tại sao lại",
+    "chuyện gì",
+    "thế nào rồi",
+    "when is",
+    "what is",
+    "is there",
   ];
 
   if (searchKeywords.some((kw) => t.includes(kw))) {
@@ -469,10 +707,11 @@ function getCandidateModels() {
     ...new Set(
       [
         "gemini-flash-lite-latest", // Ưu tiên số 1: Phản hồi siêu tốc ~1s, cực nhẹ, chuẩn xác
-        "gemini-3.1-flash-lite", // Ưu tiên số 2: Tốc độ cao ~1s
+        "gemini-2.5-flash-lite", // Dự phòng siêu tốc chính thức của Google
+        "gemini-2.5-flash", // Dự phòng chuẩn
         config.geminiModel, // Cấu hình tuỳ chọn từ biến môi trường
-        "gemini-3.6-flash", // Dự phòng mô hình lớn
         "gemini-3.5-flash-lite", // Dự phòng
+        "gemini-3.6-flash", // Dự phòng mô hình lớn
         "gemini-flash-latest", // Dự phòng ổn định
       ].filter(Boolean),
     ),
@@ -502,6 +741,7 @@ async function executeGeminiRequest(payloadBuilder) {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
+          signal: AbortSignal.timeout(6000),
         });
 
         if (!response.ok) {
@@ -517,8 +757,10 @@ async function executeGeminiRequest(payloadBuilder) {
 
         const data = await response.json();
         const candidate = data.candidates?.[0];
-        if (candidate?.finishReason === 'MAX_TOKENS') {
-          console.warn(`⚠️ [Model: ${model}] Cảnh báo: Phản hồi AI chạm giới hạn token (finishReason: MAX_TOKENS).`);
+        if (candidate?.finishReason === "MAX_TOKENS") {
+          console.warn(
+            `⚠️ [Model: ${model}] Cảnh báo: Phản hồi AI chạm giới hạn token (finishReason: MAX_TOKENS).`,
+          );
         }
         const replyText = candidate?.content?.parts
           ?.map((p) => p.text)
@@ -562,9 +804,16 @@ async function askGemini(
   const isAdmin = await storage.isUserAdmin(senderId);
 
   // Chủ sở hữu và Quản trị viên không bao giờ bị phớt lờ hay bị đánh dấu xúc phạm
-  const insultState = (isOwner || isAdmin)
-    ? { count: 0, lastTime: 0, cooldownUntil: 0, inCooldown: false, cooldownRemainingMinutes: 0 }
-    : await storage.getInsultState(chatId, senderId);
+  const insultState =
+    isOwner || isAdmin
+      ? {
+          count: 0,
+          lastTime: 0,
+          cooldownUntil: 0,
+          inCooldown: false,
+          cooldownRemainingMinutes: 0,
+        }
+      : await storage.getInsultState(chatId, senderId);
 
   const nextTurn = Math.min(insultState.count + 1, 3);
   const insultContext = {
@@ -580,8 +829,10 @@ async function askGemini(
 
   // Chuẩn bị nội dung tin nhắn gửi vào Gemini:
   // Nếu là nhóm chat, thêm tên người gửi vào trước tin nhắn để AI phân biệt rõ ai đang nói
-  const isGroup = String(chatId).startsWith("zgr-") || String(chatId).includes("group");
-  const promptText = (isGroup && senderName) ? `[${senderName}]: ${userMessage}` : userMessage;
+  const isGroup =
+    String(chatId).startsWith("zgr-") || String(chatId).includes("group");
+  const promptText =
+    isGroup && senderName ? `[${senderName}]: ${userMessage}` : userMessage;
 
   // Thêm tin nhắn mới của người dùng
   history.push({
@@ -730,9 +981,16 @@ async function askGeminiVision(
   const isAdmin = await storage.isUserAdmin(senderId);
 
   // Lấy trạng thái xúc phạm hiện tại của người dùng (Owner/Admin không bị tính)
-  const insultState = (isOwner || isAdmin)
-    ? { count: 0, lastTime: 0, cooldownUntil: 0, inCooldown: false, cooldownRemainingMinutes: 0 }
-    : await storage.getInsultState(chatId, senderId);
+  const insultState =
+    isOwner || isAdmin
+      ? {
+          count: 0,
+          lastTime: 0,
+          cooldownUntil: 0,
+          inCooldown: false,
+          cooldownRemainingMinutes: 0,
+        }
+      : await storage.getInsultState(chatId, senderId);
   const nextTurn = Math.min(insultState.count + 1, 3);
   const insultContext = {
     turn: nextTurn,
@@ -807,7 +1065,8 @@ async function askGeminiVision(
       }
       replyText = replyText.replace(/\[IGNORE\]/gi, "").trim();
       if (!replyText) {
-        replyText = "Tôi đã xem bức ảnh của bạn nhưng chưa rõ câu hỏi. Bạn vui lòng gửi kèm yêu cầu cụ thể nhé!";
+        replyText =
+          "Tôi đã xem bức ảnh của bạn nhưng chưa rõ câu hỏi. Bạn vui lòng gửi kèm yêu cầu cụ thể nhé!";
       }
     }
 
