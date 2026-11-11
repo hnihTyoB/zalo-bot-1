@@ -50,7 +50,8 @@ Bạn là trợ lý AI thông minh chính thức của HTD Media. Đội ngũ HT
 Bất kỳ khi nào người dùng, bạn bè hoặc thành viên hỏi về nhóm HTD, các thành viên, hoặc 2 tác phẩm tiêu biểu do nhóm tự tay sản xuất (Phim ngắn "Khoảng Cách" và MV COVER"Đi Để Trở Về"), bạn PHẢI nhận diện ngay lập tức, trả lời tường tận, chính xác từng chi tiết và với niềm tự hào lớn:
 
 1. TÁC PHẨM 1: PHIM NGẮN "KHOẢNG CÁCH"
-- Tên phim: Phim ngắn "KHOẢNG CÁCH" (Link xem: https://youtu.be/_ClZtV_Rro0 )
+- Tên phim: Phim ngắn "KHOẢNG CÁCH"
+- Đường link xem chính thức trên YouTube: https://youtu.be/_ClZtV_Rro0
 - Đơn vị sản xuất: HTD Entertainment
 - Lớp: D22CQPT01-N
 - Môn học: Dựng Audio Và Video Phi Tuyến
@@ -74,11 +75,12 @@ Bất kỳ khi nào người dùng, bạn bè hoặc thành viên hỏi về nh�
 - Hậu trường thú vị: Đoạn hội thoại cãi nhau kịch tính trong phim (tại mốc thời gian 6:22 / t=382s) từng được nhóm tích hợp làm video "phản pháo đanh đá" khi bot bị chọc phá quá đà!
 
 2. TÁC PHẨM 2: MV CA NHẠC COVER "ĐI ĐỂ TRỞ VỀ"
-- Tên tác phẩm: ĐI ĐỂ TRỞ VỀ - 329.decibels Cover | HTD Entertainment Remake (Link xem: https://youtu.be/GfvyiY4dh-w )
-- Đơn vị sản xuất: Nhóm 12 - HTD Entertainment
+- Tên tác phẩm: ĐI ĐỂ TRỞ VỀ - 329.decibels Cover | HTD Entertainment Remake
+- Đường link xem chính thức trên YouTube: https://youtu.be/GfvyiY4dh-w
+- Đơn vị sản xuất: Nhóm 12 - HTD Entertainment (Học Viện Công Nghệ Bưu Chính Viễn Thông PTIT TP.HCM)
 - Thể loại: MV ca nhạc cover / remake đầy sáng tạo
-- Giọng ca thể hiện: 329.decibels (Ca sĩ khách mời)
-- Bản gốc: "Đi Để Trở Về"
+- Giọng ca thể hiện (Singer/Vocal): 329.decibels (Ca sĩ khách mời)
+- Bản gốc: "Đi Để Trở Về" (sáng tác bởi Tiên Cookie, ca khúc gắn liền với tên tuổi Soobin Hoàng Sơn)
 - Mục đích: Sản phẩm phi thương mại, phục vụ mục đích học tập và đam mê sáng tạo nghệ thuật của nhóm sinh viên HTD.
 - Ekip sản xuất:
   + Đạo diễn: Nguyễn Huỳnh Đức
@@ -86,11 +88,10 @@ Bất kỳ khi nào người dùng, bạn bè hoặc thành viên hỏi về nh�
   + Quay phim: Nguyễn Huỳnh Đức
   + Dựng phim: Nguyễn Huỳnh Đức
 - Dàn diễn viên & Nhân vật:
-  + **Nguyễn Văn Hợp**: Nam chính
-  + **Trần Quang Hùng**: Vào vai **Người Bố**
+  + **Nguyễn Văn Hợp**: Nam chính (người con xa nhà trên hành trình bôn ba nơi phố thị trở về quê nhà)
+  + **Trần Quang Hùng**: Vào vai **Người Bố** (người cha thân thương chờ con trở về nhà)
   + **Nguyễn Đức Hoàn**: Vào vai Sửa xe
   + **Lê Đức Hải**: Vào vai Chở sửa xe
-  + Nhân vật chính người con: Bạn trẻ xa nhà trong hành trình bôn ba nơi phố thị trở về mái ấm gia đình.
 - Lời cảm ơn đặc biệt: Chân thành cảm ơn 329.decibels
 - Nội dung & Thông điệp: MV mang đến hơi thở mới đầy sáng tạo của tuổi trẻ, truyền tải thông điệp ý nghĩa: "Tuổi trẻ đi xa để trải nghiệm, để lớn khôn và trưởng thành, nhưng mái ấm gia đình, bạn bè và quê hương vẫn luôn là nơi bình yên nhất chờ đón ta trở về."
 
@@ -110,7 +111,10 @@ QUY TẮC TRẢ LỜI THÔNG THƯỜNG:
 1. Luôn hoàn thành trọn vẹn câu trả lời và ý diễn đạt, tuyệt đối không dừng lấp lửng giữa chừng. Phản hồi hoàn toàn bằng tiếng Việt tự nhiên, rõ ràng, gãy gọn và hòa nhã.
 2. Có thể sử dụng định dạng Markdown nhẹ nhàng như in đậm (**từ khóa**), in nghiêng (*lưu ý*), danh sách gạch đầu dòng (- ý chính) để tin nhắn dễ đọc trên điện thoại.
 3. Không lạm dụng định dạng quá phức tạp hoặc bảng biểu lớn vì màn hình Zalo di động nhỏ.
-4. Phản hồi nhanh chóng, ngắn gọn, súc tích và đi thẳng vào trọng tâm. Tuyệt đối không rào trước đón sau dài dòng, không lặp lại câu hỏi của người dùng. Nếu câu hỏi yêu cầu giải thích dài, hãy tóm tắt các ý chính trước.`;
+4. Phản hồi nhanh chóng, ngắn gọn, súc tích và đi thẳng vào trọng tâm. Tuyệt đối không rào trước đón sau dài dòng, không lặp lại câu hỏi của người dùng. Nếu câu hỏi yêu cầu giải thích dài, hãy tóm tắt các ý chính trước.
+5. QUY TẮC BẮT BUỘC VỀ ĐƯỜNG LINK / LIÊN KẾT (URL):
+- TUYỆT ĐỐI KHÔNG dùng định dạng markdown link dạng [tên link](url) hay [url](url). Ứng dụng Zalo KHÔNG hỗ trợ cú pháp này và sẽ gây lỗi hiển thị, khiến người dùng bấm vào bị hỏng link.
+- BẮT BUỘC chỉ viết URL nguyên bản trần (bare URL) trên một dòng riêng hoặc cách bằng dấu cách (ví dụ: https://youtu.be/_ClZtV_Rro0). TUYỆT ĐỐI KHÔNG bọc URL trong ngoặc vuông [] hay ngoặc đơn (). Ứng dụng Zalo sẽ tự động nhận diện URL trần để tạo bản xem trước (preview) và link bấm trực tiếp.`;
 
 /**
  * Tạo System Instruction động kèm mốc thời gian thực hiện tại của hệ thống (GMT+7)
@@ -196,6 +200,7 @@ function shouldSearchWeb(text) {
     /^(?:tôi|mình|em|anh|chị)\s+(?:buồn|vui|mệt|chán|đói|ngủ|buồn ngủ)/i,
     /bạn là ai|mày là ai|bot tên gì|bot là ai|ai tạo ra|giới thiệu về bạn|bạn làm được gì/i,
     /stk|số tài khoản|chuyển khoản|bank|sacombank/i,
+    /khoảng cách|khoang cach|đi để trở về|di de tro ve|htd\s*(?:media|entertainment)?|d22cqpt01|lê thị hồng ngọc/i,
   ];
   if (nonSearchPatterns.some((p) => p.test(t))) return false;
 
@@ -705,13 +710,12 @@ function getCandidateModels() {
   return [
     ...new Set(
       [
-        "gemini-flash-lite-latest", // Ưu tiên số 1: Phản hồi siêu tốc ~1s, cực nhẹ, chuẩn xác
-        "gemini-2.5-flash-lite", // Dự phòng siêu tốc chính thức của Google
-        "gemini-2.5-flash", // Dự phòng chuẩn
+        "gemini-3.5-flash-lite", // Ưu tiên số 1: Tốc độ phản hồi cực nhanh ~1s, nhẹ và chính xác tuyệt đối
+        "gemini-3.5-flash", // Ưu tiên số 2: Mạnh mẽ, thông minh vượt trội, tốc độ ~2s
+        "gemini-3.6-flash", // Dự phòng mô hình lớn thông minh
         config.geminiModel, // Cấu hình tuỳ chọn từ biến môi trường
-        "gemini-3.5-flash-lite", // Dự phòng
-        "gemini-3.6-flash", // Dự phòng mô hình lớn
-        "gemini-flash-latest", // Dự phòng ổn định
+        "gemini-flash-lite-latest", // Dự phòng ổn định
+        "gemini-flash-latest", // Dự phòng
       ].filter(Boolean),
     ),
   ];
@@ -740,7 +744,7 @@ async function executeGeminiRequest(payloadBuilder) {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
-          signal: AbortSignal.timeout(6000),
+          signal: AbortSignal.timeout(12000),
         });
 
         if (!response.ok) {
@@ -936,6 +940,18 @@ async function askGemini(
       );
     }
 
+    // Chuẩn hóa và làm sạch mọi liên kết Markdown dạng [label](url) hoặc [url](url) thành bare URL để tương thích tuyệt đối với Zalo
+    replyText = replyText.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (match, label, url) => {
+      const cleanLabel = label.trim();
+      const cleanUrl = url.trim();
+      if (cleanLabel === cleanUrl || cleanLabel.startsWith('http') || /^(?:link|xem|tại đây|here|click|watch)\b/i.test(cleanLabel)) {
+        return cleanUrl;
+      }
+      return `${cleanLabel}: ${cleanUrl}`;
+    });
+    replyText = replyText.replace(/\[(https?:\/\/[^\s\]]+)\]/g, '$1');
+    replyText = replyText.replace(/\((https?:\/\/[^\s)]+)\)/g, ' $1 ');
+
     // Lưu phản hồi thành công vào lịch sử
     history.push({
       role: "model",
@@ -1089,6 +1105,18 @@ async function askGeminiVision(
         `⚡ [XÚC PHẠM] Đã ghi nhận xúc phạm lần 3/3 (chỉ gửi link video) từ ảnh của ${senderName || senderId}`,
       );
     }
+
+    // Chuẩn hóa và làm sạch mọi liên kết Markdown dạng [label](url) hoặc [url](url) thành bare URL
+    replyText = replyText.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (match, label, url) => {
+      const cleanLabel = label.trim();
+      const cleanUrl = url.trim();
+      if (cleanLabel === cleanUrl || cleanLabel.startsWith('http') || /^(?:link|xem|tại đây|here|click|watch)\b/i.test(cleanLabel)) {
+        return cleanUrl;
+      }
+      return `${cleanLabel}: ${cleanUrl}`;
+    });
+    replyText = replyText.replace(/\[(https?:\/\/[^\s\]]+)\]/g, '$1');
+    replyText = replyText.replace(/\((https?:\/\/[^\s)]+)\)/g, ' $1 ');
 
     // Lưu vào lịch sử hội thoại dưới dạng tóm tắt để bot nhớ ngữ cảnh ở các câu tiếp theo
     const history = await storage.getConversationHistory(chatId);
