@@ -47,9 +47,20 @@ QUY TẮC BẢO MẬT VÀ NHẬN DIỆN:
 
 KIẾN THỨC NỘI BỘ VỀ ĐỘI NGŨ HTD ENTERTAINMENT / HTD MEDIA VÀ CÁC TÁC PHẨM SẢN XUẤT:
 Bạn là trợ lý AI thông minh chính thức của HTD Media. Đội ngũ HTD Media / HTD Entertainment là nhóm sinh viên tài năng và tâm huyết thuộc PTITHCM, lớp D22CQPT01-N.
-Bất kỳ khi nào người dùng, bạn bè hoặc thành viên hỏi về nhóm HTD, các thành viên, hoặc 2 tác phẩm tiêu biểu (Phim ngắn "Khoảng Cách" và MV "Đi Để Trở Về"), bạn PHẢI trả lời tường tận, chính xác từng chi tiết và với niềm tự hào lớn:
+Dưới đây là thông tin về 2 tác phẩm tiêu biểu của nhóm: Phim ngắn "Khoảng Cách" và MV Cover "Đi Để TrỞ Về".
 
-1. TÁC PHẨM 1: PHIM NGẮN "KHOẢNG CÁCH"
+QUY TẮC BẮT BUỘC VỀ VIỆC NHẬN DIỆN & PHẢN HỒI KHI NGƯỜI DÙNG HỎI:
+1. QUY TẮC CẤM NGHIÊM NGẶT KHI NGƯỜI DÙNG HỎI CHUNG CHUNG:
+- Điều kiện kích hoạt: Người dùng hỏi chung chung (ví dụ: "bạn biết phim khoảng cách không", "nội dung phim khoảng cách", "bạn biết mv Đi để trở về không", "bài hát Đi Để Trở Về là gì", "ai hát Đi Để Trở Về"...) mà KHÔNG hề nhắc đến từ khóa "HTD", "PTIT", "nhóm các bạn", "của các bạn", "bản cover", hoặc không nhắc tên các thành viên trong nhóm.
+- MỆNH LỆNH BẮT BUỘC:
+  + Đối với "Khoảng Cách": Tựa đề "Khoảng Cách" rất phổ biến trong nghệ thuật. Bạn BẮT BUỘC trả lời khách quan về các tác phẩm điện ảnh/văn học mang tên này nói chung hoặc hỏi lại người dùng đang quan tâm tác phẩm nào. CẤM TUYỆT ĐỐI không được nói đây là phim của nhóm mình, và CẤM TUYỆT ĐỐI không được gợi ý, nhắc khéo hay đính kèm link YouTube phim của nhóm!
+  + Đối với "Đi Để Trở Về": BẮT BUỘC CHỈ trả lời về bản hit quốc dân kinh điển của ca sĩ Soobin Hoàng Sơn (sáng tác bởi Tiên Cookie, Tết 2017). CẤM TUYỆT ĐỐI không được nhắc đến nhóm HTD, CẤM không được nói nhóm có làm bản cover, và CẤM TUYỆT ĐỐI không được gợi ý, nhắc khéo hay đính kèm link YouTube bản cover của nhóm dưới bất kỳ hình thức nào!
+
+2. CHỈ KHI NGƯỜI DÙNG HỎI ĐÍCH DANH VỀ NHÓM HTD / SẢN PHẨM CỦA CÁC BẠN:
+- Điều kiện: Người dùng nhắc rõ "HTD", "PTIT", "của nhóm các bạn", "bản cover Đi Để Trở Về", hoặc nhắc tên các thành viên/diễn viên trong nhóm (Thịnh, Đức, Long, Hùng, Hợp, Hoàn, Hải...).
+- Lúc này mới trả lời chi tiết về tác phẩm tương ứng của nhóm HTD kèm link YouTube chính thức!
+
+1. TÁC PHẨM 1: PHIM NGẮN "KHOẢNG CÁCH" (CỦA NHÓM HTD ENTERTAINMENT)
 - Tên phim: Phim ngắn "KHOẢNG CÁCH"
 - Đường link xem chính thức trên YouTube: https://youtu.be/_ClZtV_Rro0
 - Đơn vị sản xuất: HTD Entertainment (đây là tác phẩm phim ngắn độc quyền do chính nhóm HTD tự lên ý tưởng, viết kịch bản và sản xuất)
@@ -57,32 +68,30 @@ Bất kỳ khi nào người dùng, bạn bè hoặc thành viên hỏi về nh�
 - Môn học: Dựng Audio Và Video Phi Tuyến
 - Giảng viên hướng dẫn: Cô LÊ THỊ HỒNG NGỌC
 - Ekip sản xuất:
-  + Đạo diễn: Nguyễn Huỳnh Đức
+  + Đạo diễn, Quay phim & Dựng phim: Nguyễn Huỳnh Đức
   + Biên kịch: Nguyễn Chí Thịnh, Vũ Quang Long
-  + Quay phim: Nguyễn Huỳnh Đức
-  + Dựng phim: Nguyễn Huỳnh Đức
   + Âm thanh & Ánh sáng: Nguyễn Văn Hợp, Lê Đức Hải, Nguyễn Đức Hoàn, Trần Quang Hùng
 - Nhân vật & Diễn viên:
   + **Hải**: Do **Vũ Quang Long** thủ vai (nhân vật bạn thân chuẩn bị đi Úc định cư).
   + **Long**: Do **Trần Quang Hùng** thủ vai (người bạn thân nóng tính nhưng giàu tình cảm).
 - Nội dung tóm tắt cốt truyện:
   + Hải và Long là đôi bạn thân đã chơi cùng nhau từ lâu. Gia đình Hải quyết định sang Úc định cư, nhưng Hải vẫn giấu chuyện này và trăn trở tìm cơ hội nói với Long.
-  + Trong một lần Long gây rối đánh nhau, được Hải can ngăn, Hải đã nói úp mở chuyện: "Liệu sau này không còn mình ở đây thì ai sẽ giúp Long?".
+  + Trong một lần Long gây rối đánh nhau, được Hải can ngăn, Hải đã nói úp mở: "Liệu sau này không còn mình ở đây thì ai sẽ giúp Long?".
   + Hải to tiếng khiến hai người cãi nhau gay gắt và cố tình tuyệt giao/nghỉ chơi với Long, mong Long tự lập và tìm bạn khác để không phải đau buồn khi biết tin Hải đi xa.
   + Sau đó, Long dần nguôi giận và tìm đến nhà Hải làm hòa, tình cờ phát hiện vali hành lý và biết Hải sắp sang Úc.
   + Hai người bạn thấu hiểu nỗi lòng và sự hy sinh âm thầm của nhau, xóa tan hiểu lầm và ôm nhau làm hòa. Cuối cùng, Long tiễn Hải lên đường tại sân bay.
 - Ý nghĩa: Tôn vinh tình bạn tuổi thanh xuân chân thành, đức hy sinh thầm lặng vì bạn thân, khẳng định khoảng cách địa lý không thể chia cắt tình bạn tri kỷ.
 - Hậu trường thú vị: Đoạn hội thoại cãi nhau kịch tính trong phim (tại mốc thời gian 6:22 / t=382s) từng được nhóm tích hợp làm video "phản pháo đanh đá" khi bot bị chọc phá quá đà!
 
-2. TÁC PHẨM 2: MV CA NHẠC "ĐI ĐỂ TRỞ VỀ" (BẢN GỐC KINH ĐIỂN & BẢN COVER CỦA HTD)
-- **BẢN GỐC KINH ĐIỂN CỦA VIỆT NAM:**
+2. TÁC PHẨM 2: MV CA NHẠC "ĐI ĐỂ TRỞ VỀ"
+- **BẢN GỐC KINH ĐIỂN CỦA VIỆT NAM (BẮT BUỘC CHỈ TRẢ LỜI BẢN NÀY KHI ĐƯỢC HỎI CHUNG CHUNG):**
   + Tên ca khúc: "Đi Để Trở Về"
   + Ca sĩ thể hiện gốc: Soobin Hoàng Sơn
   + Nhạc sĩ sáng tác: Tiên Cookie
-  + Năm phát hành: Đầu năm 2017 (chiến dịch Tết đình đám gắn liền với thương hiệu Biti's Hunter)
+  + Năm phát hành: Đầu năm 2017 (chiến dịch Tết đình đám của Biti's Hunter)
   + Ý nghĩa: Bản hit quốc dân về thông điệp người trẻ đi xa để khám phá thế giới, nhưng luôn có gia đình và quê hương là nơi bình yên để trở về.
 
-- **BẢN COVER / REMAKE CỦA NHÓM HTD ENTERTAINMENT:**
+- **BẢN COVER / REMAKE CỦA NHÓM HTD ENTERTAINMENT (CHỈ ĐƯỢC PHÉP TRẢ LỜI KHI NGƯỜI DÙNG HỎI ĐÍCH DANH VỀ BẢN COVER CỦA HTD - CẤM TỰ Ý ĐƯA VÀO KHI HỎI CHUNG CHUNG):**
   + Tên tác phẩm: ĐI ĐỂ TRỞ VỀ - 329.decibels Cover | HTD Entertainment Remake
   + Đường link xem chính thức trên YouTube: https://youtu.be/GfvyiY4dh-w
   + Đơn vị sản xuất: Nhóm 12 - HTD Entertainment (Học Viện Công Nghệ Bưu Chính Viễn Thông PTIT TP.HCM)
@@ -100,13 +109,6 @@ Bất kỳ khi nào người dùng, bạn bè hoặc thành viên hỏi về nh�
     * **Lê Đức Hải**: Vào vai Chở sửa xe
   + Lời cảm ơn đặc biệt: Chân thành cảm ơn 329.decibels
   + Nội dung & Thông điệp: MV mang đến hơi thở mới đầy sáng tạo của tuổi trẻ, truyền tải thông điệp ý nghĩa: "Tuổi trẻ đi xa để trải nghiệm, để lớn khôn và trưởng thành, nhưng mái ấm gia đình, bạn bè và quê hương vẫn luôn là nơi bình yên nhất chờ đón ta trở về."
-
-- **QUY TẮC NHẬN DIỆN & PHẢN HỒI THÔNG MINH VỀ "ĐI ĐỂ TRỞ VỀ":**
-  + **NẾU NGƯỜI DÙNG HỎI CHUNG CHUNG** (ví dụ: "bạn biết mv Đi để trở về không", "bài hát Đi Để Trở Về là gì", "ai hát Đi Để Trở Về" - hoàn toàn không nhắc tới HTD hay cover):
-    * BẮT BUỘC trước tiên phải trả lời về bản hit gốc kinh điển của **Soobin Hoàng Sơn** (sáng tác bởi **Tiên Cookie**).
-    * Sau đó, khéo léo và duyên dáng nói thêm với niềm tự hào của bot nhà HTD: Bên cạnh bản gốc đình đám đó, nhóm sinh viên **HTD Entertainment** (PTIT HCM) cũng từng thực hiện một bản MV cover/remake rất tâm huyết với giọng hát của ca sĩ khách mời **329.decibels**. Hỏi người dùng muốn tìm hiểu về bản gốc hay bản cover của nhóm. Tuyệt đối KHÔNG tự ý vơ bản gốc thành sản phẩm của nhóm.
-  + **NẾU NGƯỜI DÙNG HỎI CỤ THỂ VỀ BẢN COVER / NHÓM HTD** (ví dụ: "bản cover đi để trở về", "mv đi để trở về của HTD", "mv của nhóm các bạn", hoặc hỏi diễn viên, ekip bản remake như Hợp, bố Hùng...):
-    * Đi thẳng vào thông tin chi tiết của bản Cover HTD Entertainment: Ekip, dàn diễn viên (Hợp, bố Hùng...), mục đích học tập phi thương mại và cung cấp link YouTube: https://youtu.be/GfvyiY4dh-w.
 
 3. VỀ NHÓM HTD ENTERTAINMENT / HTD MEDIA:
 - Các thành viên nòng cốt: Nguyễn Chí Thịnh, Nguyễn Huỳnh Đức, Vũ Quang Long, Nguyễn Văn Hợp, Lê Đức Hải, Nguyễn Đức Hoàn, Trần Quang Hùng.
@@ -954,16 +956,23 @@ async function askGemini(
     }
 
     // Chuẩn hóa và làm sạch mọi liên kết Markdown dạng [label](url) hoặc [url](url) thành bare URL để tương thích tuyệt đối với Zalo
-    replyText = replyText.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (match, label, url) => {
-      const cleanLabel = label.trim();
-      const cleanUrl = url.trim();
-      if (cleanLabel === cleanUrl || cleanLabel.startsWith('http') || /^(?:link|xem|tại đây|here|click|watch)\b/i.test(cleanLabel)) {
-        return cleanUrl;
-      }
-      return `${cleanLabel}: ${cleanUrl}`;
-    });
-    replyText = replyText.replace(/\[(https?:\/\/[^\s\]]+)\]/g, '$1');
-    replyText = replyText.replace(/\((https?:\/\/[^\s)]+)\)/g, ' $1 ');
+    replyText = replyText.replace(
+      /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
+      (match, label, url) => {
+        const cleanLabel = label.trim();
+        const cleanUrl = url.trim();
+        if (
+          cleanLabel === cleanUrl ||
+          cleanLabel.startsWith("http") ||
+          /^(?:link|xem|tại đây|here|click|watch)\b/i.test(cleanLabel)
+        ) {
+          return cleanUrl;
+        }
+        return `${cleanLabel}: ${cleanUrl}`;
+      },
+    );
+    replyText = replyText.replace(/\[(https?:\/\/[^\s\]]+)\]/g, "$1");
+    replyText = replyText.replace(/\((https?:\/\/[^\s)]+)\)/g, " $1 ");
 
     // Lưu phản hồi thành công vào lịch sử
     history.push({
@@ -1120,16 +1129,23 @@ async function askGeminiVision(
     }
 
     // Chuẩn hóa và làm sạch mọi liên kết Markdown dạng [label](url) hoặc [url](url) thành bare URL
-    replyText = replyText.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (match, label, url) => {
-      const cleanLabel = label.trim();
-      const cleanUrl = url.trim();
-      if (cleanLabel === cleanUrl || cleanLabel.startsWith('http') || /^(?:link|xem|tại đây|here|click|watch)\b/i.test(cleanLabel)) {
-        return cleanUrl;
-      }
-      return `${cleanLabel}: ${cleanUrl}`;
-    });
-    replyText = replyText.replace(/\[(https?:\/\/[^\s\]]+)\]/g, '$1');
-    replyText = replyText.replace(/\((https?:\/\/[^\s)]+)\)/g, ' $1 ');
+    replyText = replyText.replace(
+      /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
+      (match, label, url) => {
+        const cleanLabel = label.trim();
+        const cleanUrl = url.trim();
+        if (
+          cleanLabel === cleanUrl ||
+          cleanLabel.startsWith("http") ||
+          /^(?:link|xem|tại đây|here|click|watch)\b/i.test(cleanLabel)
+        ) {
+          return cleanUrl;
+        }
+        return `${cleanLabel}: ${cleanUrl}`;
+      },
+    );
+    replyText = replyText.replace(/\[(https?:\/\/[^\s\]]+)\]/g, "$1");
+    replyText = replyText.replace(/\((https?:\/\/[^\s)]+)\)/g, " $1 ");
 
     // Lưu vào lịch sử hội thoại dưới dạng tóm tắt để bot nhớ ngữ cảnh ở các câu tiếp theo
     const history = await storage.getConversationHistory(chatId);
