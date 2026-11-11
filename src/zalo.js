@@ -60,24 +60,38 @@ async function sendChatAction(chatId, action = 'typing') {
 async function sendMessage(chatId, text, parseMode = 'markdown') {
   // Giới hạn Zalo là 2000 ký tự. Cắt nhỏ nếu quá dài
   const MAX_LEN = 1900;
-  const trimmed = String(text || '').trim();
+  let cleanText = String(text || '').trim();
 
-  // Nếu tin nhắn chỉ là URL hoặc chứa URL có ký tự gạch dưới '_' (như link video YouTube)
-  // và không chứa định dạng markdown in đậm/nghiêng: Tự động tắt parseMode (gửi plain text)
-  // để Zalo không parse các dấu '_' trong link thành chữ in nghiêng, làm hỏng link.
-  const isPureUrl = /^https?:\/\/[^\s]+$/i.test(trimmed);
-  const containsUnderscoreUrl = /https?:\/\/[^\s]*_[^\s]*/i.test(trimmed);
-  const hasMarkdownFormat = /\*\*[^*]+\*\*|_[^_]+_|\`[^`]+\`/.test(trimmed.replace(/https?:\/\/[^\s]+/g, ''));
+  // 1. Chuyển đổi mọi cú pháp Markdown Link [label](url) hoặc [url](url) thành bare URL
+  // Zalo không hỗ trợ cú pháp [text](url) - nếu để nguyên sẽ hiển thị dấu ngoặc xấu và dễ bị lỗi click
+  cleanText = cleanText.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (match, label, url) => {
+    const cleanLabel = label.trim();
+    const cleanUrl = url.trim();
+    if (cleanLabel === cleanUrl || cleanLabel.startsWith('http') || /^(?:link|xem|tại đây|here|click|watch)\b/i.test(cleanLabel)) {
+      return cleanUrl;
+    }
+    return `${cleanLabel}: ${cleanUrl}`;
+  });
+
+  // 2. Gỡ bỏ ngoặc vuông/ngoặc đơn thừa bao quanh URL: [https://...] hoặc (https://...)
+  cleanText = cleanText.replace(/\[(https?:\/\/[^\s\]]+)\]/g, '$1');
+  cleanText = cleanText.replace(/\((https?:\/\/[^\s)]+)\)/g, ' $1 ');
+
+  // 3. Nếu tin nhắn chứa URL có ký tự gạch dưới '_' (như link video YouTube: _ClZtV_Rro0):
+  // BẮT BUỘC tắt parseMode (gửi plain text) vì trình phân tích Markdown của Zalo Server
+  // sẽ coi cặp dấu '_' trong URL là thẻ in nghiêng và xóa mất dấu gạch dưới, làm hỏng hoàn toàn URL (thành ClZtVRro0 -> 404).
+  const isPureUrl = /^https?:\/\/[^\s]+$/i.test(cleanText);
+  const containsUnderscoreUrl = /https?:\/\/[^\s]*_[^\s]*/i.test(cleanText);
 
   let effectiveParseMode = parseMode;
-  if (isPureUrl || (containsUnderscoreUrl && !hasMarkdownFormat)) {
+  if (isPureUrl || containsUnderscoreUrl) {
     effectiveParseMode = null;
   }
 
-  if (trimmed.length <= MAX_LEN) {
+  if (cleanText.length <= MAX_LEN) {
     const payload = {
       chat_id: String(chatId),
-      text: trimmed
+      text: cleanText
     };
     if (effectiveParseMode) {
       payload.parse_mode = effectiveParseMode;
@@ -87,7 +101,7 @@ async function sendMessage(chatId, text, parseMode = 'markdown') {
 
   // Nếu tin nhắn dài hơn 1900 ký tự, tách theo dòng hoặc đoạn
   const chunks = [];
-  let remaining = text;
+  let remaining = cleanText;
   while (remaining.length > 0) {
     if (remaining.length <= MAX_LEN) {
       chunks.push(remaining);
