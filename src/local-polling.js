@@ -1387,7 +1387,10 @@ async function handleMessage(eventData) {
     // Gửi phản hồi lại cho người dùng qua Zalo
     const isPureUrl = /^https?:\/\/[^\s]+$/i.test(aiReply.trim());
     const parseMode = isPureUrl ? null : "markdown";
-    await sendMessage(chatId, aiReply, parseMode);
+    const resSend = await sendMessage(chatId, aiReply, parseMode);
+    if (!resSend?.ok) {
+      await sendMessage(chatId, aiReply, null);
+    }
     console.log(`✅ Đã gửi phản hồi thành công tới ${senderName}`);
   } catch (err) {
     clearInterval(typingTimer);

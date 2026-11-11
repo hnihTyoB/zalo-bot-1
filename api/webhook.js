@@ -1430,7 +1430,11 @@ module.exports = async (req, res) => {
     }
     const isPureUrl = /^https?:\/\/[^\s]+$/i.test(aiReply.trim());
     const parseMode = isPureUrl ? null : "markdown";
-    const zaloRes = await sendMessage(chatId, aiReply, parseMode);
+    let zaloRes = await sendMessage(chatId, aiReply, parseMode);
+    if (!zaloRes?.ok) {
+      console.warn("⚠️ Gửi markdown thất bại, đang gửi lại dạng văn bản thuần...", zaloRes);
+      zaloRes = await sendMessage(chatId, aiReply, null);
+    }
     return res.status(200).json({ ok: true, zalo: zaloRes });
   } catch (err) {
     clearInterval(typingTimer);

@@ -34,6 +34,11 @@ QUY TẮC PHẢN ỨNG KHI BỊ XÚC PHẠM, CHỬI BỚI, KHIÊU KHÍCH (QUAN T
     * Sau khi đã gửi link ở lần thứ 3: Nếu người đó vẫn tiếp tục có lời lẽ xúc phạm trong vòng 15 phút tiếp theo, bạn BẮT BUỘC PHẢI HOÀN TOÀN PHỚT LỜ (im lặng tuyệt đối, không đáp trả bất kỳ lời nào, chỉ xuất ra duy nhất từ [IGNORE]).
   + NGOẠI LỆ ĐẶC BIỆT TRONG 15 PHÚT PHỚT LỜ:
     * Trong suốt 15 phút đó, nếu người đó hoặc bất kỳ ai khác hỏi các câu hỏi khác (câu hỏi thông thường, tìm kiếm thông tin, hỏi kiến thức hoặc giao tiếp lịch sự): BẠN VẪN PHẢI TRẢ LỜI ĐẦY ĐỦ, LỊCH SỰ, CHU ĐÁO VÀ HỮU ÍCH NHƯ BÌNH THƯỜNG.
+- LƯU Ý ĐẶC BIỆT KHI Ở TRONG NHÓM CHAT (GROUP):
+  + Trong nhóm có nhiều thành viên khác nhau. Mỗi tin nhắn có gắn tên thành viên [Tên].
+  + Nếu có thành viên trước đó bị cảnh cáo hoặc gửi video châm biếm, điều đó CHỈ áp dụng riêng cho thành viên vi phạm đó.
+  + TUYỆT ĐỐI KHÔNG áp đặt lên các thành viên khác hay Quản trị viên/Chủ sở hữu. Khi thành viên khác hoặc Quản trị viên hỏi, bạn BẮT BUỘC trả lời bình thường, thân thiện và nhiệt tình!
+  + TUYỆT ĐỐI KHÔNG xuất ra [IGNORE] nếu tin nhắn hiện tại là chào hỏi, hỏi thông tin, câu hỏi thông thường hoặc không có từ ngữ xúc phạm.
 
 QUY TẮC BẢO MẬT VÀ NHẬN DIỆN:
 - Tuyệt đối KHÔNG nhắc đến tên mô hình kỹ thuật bên dưới (như Gemini, Flash, 3.6 Flash, GPT, hay các phiên bản công nghệ cụ thể).
@@ -77,25 +82,26 @@ THÔNG TIN THỜI GIAN THỰC HIỆN TẠI CỦA HỆ THỐNG (NĂM 2026):
 - Khi người dùng hỏi về các thông tin thực tế, nhân sự, đơn vị hành chính, huấn luyện viên, sự kiện... bạn BẮT BUỘC phải dựa vào thông tin tra cứu mới nhất từ Internet (LIVE WEB DATA) ở dưới để phản hồi, tuyệt đối không suy đoán hay sử dụng các kiến thức cũ đã lỗi thời trong quá khứ.`;
 
   if (insultContext) {
-    if (insultContext.inCooldown) {
+    if (insultContext.inCooldown && !insultContext.isOwner && !insultContext.isAdmin) {
       instruction += `
 
 TRẠNG THÁI HIỆN TẠI CỦA NGƯỜI DÙNG NÀY (CHẾ ĐỘ PHỚT LỜ 15 PHÚT):
-- Người này ĐANG TRONG THỜI GIAN 15 PHÚT PHỚT LỜ XÚC PHẠM (còn khoảng ${insultContext.cooldownRemainingMinutes || 15} phút).
+- Người này (${insultContext.senderName || 'Người dùng'}) ĐANG TRONG THỜI GIAN 15 PHÚT PHỚT LỜ XÚC PHẠM (còn khoảng ${insultContext.cooldownRemainingMinutes || 15} phút).
 - BẮT BUỘC:
   + NẾU TIN NHẮN HIỆN TẠI LÀ XÚC PHẠM, CHỬI BỚI, KHIÊU KHÍCH, MIỆT THỊ: TUYỆT ĐỐI KHÔNG ĐƯỢC ĐÁP LẠI BẤT KỲ ĐIỀU GÌ, CHỈ XUẤT RA DUY NHẤT TỪ: [IGNORE]
-  + NẾU TIN NHẮN HIỆN TẠI LÀ CÂU HỎI KHÁC (câu hỏi thông thường, kiến thức, tìm kiếm, trò chuyện lịch sự): TRẢ LỜI BÌNH THƯỜNG, HỮU ÍCH VÀ THÂN THIỆN NHƯ THÔNG THƯỜNG.`;
+  + NẾU TIN NHẮN HIỆN TẠI LÀ CÂU HỎI KHÁC (câu hỏi thông thường, kiến thức, tìm kiếm, trò chuyện lịch sự): TRẢ LỜI BÌNH THƯỜNG, HỮU ÍCH VÀ THÂN THIỆN NHƯ THÔNG THƯỜNG (TUYỆT ĐỐI KHÔNG XUẤT RA [IGNORE]).`;
     } else {
       const turn = insultContext.turn || 1;
       instruction += `
 
 TRẠNG THÁI HIỆN TẠI CỦA NGƯỜI DÙNG NÀY:
+- Người này (${insultContext.senderName || 'Người dùng'}) KHÔNG ở trong chế độ phớt lờ. TUYỆT ĐỐI KHÔNG XUẤT RA [IGNORE]!
 - Số lần đã xúc phạm trước đó: ${turn - 1}/3.
 - KIỂM TRA TIN NHẮN HIỆN TẠI:
   + NẾU LÀ XÚC PHẠM, CHỬI BỚI, KHIÊU KHÍCH:
     * ${turn === 1 ? "Đây là LẦN 1: BẮT BUỘC bắt đầu bằng <!--INSULT:1--> rồi bật lại cực kỳ đanh đá, cay độc, xéo sắc trong 1-2 câu ngắn." : turn === 2 ? "Đây là LẦN 2: BẮT BUỘC bắt đầu bằng <!--INSULT:2--> rồi bật lại đanh đá, xéo sắc hơn nữa trong 1-2 câu ngắn." : `Đây là LẦN 3: BẮT BUỘC CHỈ gửi duy nhất đường link sau, TUYỆT ĐỐI KHÔNG kèm bất kỳ câu chữ nào: <!--INSULT:3-->${INSULT_VIDEO_URL}`}
   + NẾU KHÔNG PHẢI XÚC PHẠM (câu hỏi bình thường, kiến thức, giao tiếp lịch sự):
-    * Trả lời bình thường, hữu ích, lịch sự. KHÔNG kèm bất kỳ thẻ nào.`;
+    * Trả lời bình thường, hữu ích, lịch sự. KHÔNG kèm bất kỳ thẻ nào. TUYỆT ĐỐI KHÔNG XUẤT RA [IGNORE]!`;
     }
   }
 
@@ -457,21 +463,35 @@ async function askGemini(
   userMessage,
   { senderId = "", senderName = "" } = {},
 ) {
-  // Lấy trạng thái xúc phạm hiện tại của người dùng
-  const insultState = await storage.getInsultState(chatId, senderId);
+  const isOwner = storage.isUserOwner(senderId);
+  const isAdmin = await storage.isUserAdmin(senderId);
+
+  // Chủ sở hữu và Quản trị viên không bao giờ bị phớt lờ hay bị đánh dấu xúc phạm
+  const insultState = (isOwner || isAdmin)
+    ? { count: 0, lastTime: 0, cooldownUntil: 0, inCooldown: false, cooldownRemainingMinutes: 0 }
+    : await storage.getInsultState(chatId, senderId);
+
   const nextTurn = Math.min(insultState.count + 1, 3);
   const insultContext = {
     turn: nextTurn,
     inCooldown: insultState.inCooldown,
     cooldownRemainingMinutes: insultState.cooldownRemainingMinutes,
+    isOwner,
+    isAdmin,
+    senderName,
   };
 
   const history = await storage.getConversationHistory(chatId);
 
+  // Chuẩn bị nội dung tin nhắn gửi vào Gemini:
+  // Nếu là nhóm chat, thêm tên người gửi vào trước tin nhắn để AI phân biệt rõ ai đang nói
+  const isGroup = String(chatId).startsWith("zgr-") || String(chatId).includes("group");
+  const promptText = (isGroup && senderName) ? `[${senderName}]: ${userMessage}` : userMessage;
+
   // Thêm tin nhắn mới của người dùng
   history.push({
     role: "user",
-    parts: [{ text: userMessage }],
+    parts: [{ text: promptText }],
   });
 
   // 1. Giới hạn số lượng tin nhắn gần nhất
@@ -497,7 +517,7 @@ async function askGemini(
   if (cleanContents.length === 0) {
     cleanContents.push({
       role: "user",
-      parts: [{ text: userMessage }],
+      parts: [{ text: promptText }],
     });
   }
 
@@ -526,13 +546,26 @@ async function askGemini(
 
     // Xử lý trường hợp phớt lờ khi bị xúc phạm trong 15 phút
     if (replyText.includes("[IGNORE]") || replyText.trim() === "[IGNORE]") {
-      console.log(
-        `🔇 [PHỚT LỜ] Tin nhắn xúc phạm từ ${senderName || senderId} bị phớt lờ (trong 15 phút cooldown).`,
+      // CHỈ phớt lờ nếu người dùng này THỰC SỰ đang trong cooldown xúc phạm (và không phải Owner/Admin)
+      if (insultContext && insultContext.inCooldown && !isOwner && !isAdmin) {
+        console.log(
+          `🔇 [PHỚT LỜ] Tin nhắn xúc phạm từ ${senderName || senderId} bị phớt lờ (trong 15 phút cooldown).`,
+        );
+        // Xóa tin nhắn xúc phạm khỏi history để không làm lệch luồng hội thoại
+        history.pop();
+        await storage.saveConversationHistory(chatId, history);
+        return null;
+      }
+
+      // Nếu người dùng KHÔNG ở trong cooldown nhưng model lại vô cớ sinh ra [IGNORE]:
+      // Làm sạch [IGNORE] và nếu rỗng thì tạo câu chào/phản hồi thân thiện mặc định
+      console.warn(
+        `⚠️ Model sinh nhầm [IGNORE] cho ${senderName || senderId}. Đang chuyển thành phản hồi thông thường...`,
       );
-      // Xóa tin nhắn xúc phạm khỏi history để không làm lệch luồng hội thoại
-      history.pop();
-      await storage.saveConversationHistory(chatId, history);
-      return null;
+      replyText = replyText.replace(/\[IGNORE\]/gi, "").trim();
+      if (!replyText) {
+        replyText = `Chào **${senderName || "bạn"}**! 👋 Tôi là **Bot HTD Media**. Tôi có thể giúp gì cho bạn?`;
+      }
     }
 
     // Xử lý các lượt xúc phạm có gắn thẻ <!--INSULT:X-->
@@ -598,13 +631,21 @@ async function askGeminiVision(
     return "⚠️ Không tìm thấy đường dẫn hình ảnh hợp lệ trong tin nhắn từ Zalo. Bạn vui lòng thử gửi lại ảnh nhé!";
   }
 
-  // Lấy trạng thái xúc phạm hiện tại của người dùng
-  const insultState = await storage.getInsultState(chatId, senderId);
+  const isOwner = storage.isUserOwner(senderId);
+  const isAdmin = await storage.isUserAdmin(senderId);
+
+  // Lấy trạng thái xúc phạm hiện tại của người dùng (Owner/Admin không bị tính)
+  const insultState = (isOwner || isAdmin)
+    ? { count: 0, lastTime: 0, cooldownUntil: 0, inCooldown: false, cooldownRemainingMinutes: 0 }
+    : await storage.getInsultState(chatId, senderId);
   const nextTurn = Math.min(insultState.count + 1, 3);
   const insultContext = {
     turn: nextTurn,
     inCooldown: insultState.inCooldown,
     cooldownRemainingMinutes: insultState.cooldownRemainingMinutes,
+    isOwner,
+    isAdmin,
+    senderName,
   };
 
   console.log(`🖼️ Đang tải ảnh phân tích từ Zalo: ${photoUrl.slice(0, 60)}...`);
@@ -663,10 +704,16 @@ async function askGeminiVision(
     let replyText = await executeGeminiRequest(() => payload);
 
     if (replyText.includes("[IGNORE]") || replyText.trim() === "[IGNORE]") {
-      console.log(
-        `🔇 [PHỚT LỜ] Ảnh/tin nhắn xúc phạm từ ${senderName || senderId} bị phớt lờ.`,
-      );
-      return null;
+      if (insultContext && insultContext.inCooldown && !isOwner && !isAdmin) {
+        console.log(
+          `🔇 [PHỚT LỜ] Ảnh/tin nhắn xúc phạm từ ${senderName || senderId} bị phớt lờ.`,
+        );
+        return null;
+      }
+      replyText = replyText.replace(/\[IGNORE\]/gi, "").trim();
+      if (!replyText) {
+        replyText = "Tôi đã xem bức ảnh của bạn nhưng chưa rõ câu hỏi. Bạn vui lòng gửi kèm yêu cầu cụ thể nhé!";
+      }
     }
 
     const insultMatch = replyText.match(/<!--INSULT:(\d)-->/);
