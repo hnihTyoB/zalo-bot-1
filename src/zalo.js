@@ -52,18 +52,22 @@ async function sendChatAction(chatId, action = 'typing') {
 }
 
 /**
- * Chuyển đổi định dạng Markdown sang HTML chuẩn được Zalo Bot API hỗ trợ (<b>, <i>, <s>, <code>, <pre>),
- * đồng thời bảo vệ tuyệt đối các đường link URL (kể cả có chứa ký tự gạch dưới '_')
- * không bao giờ bị Zalo nuốt mất hay biến dạng.
+ * Chuẩn hóa tin nhắn Markdown theo chuẩn Zalo Bot Platform:
+ * - Chuyển đổi Markdown Link [label](url) thành bare URL (vì Zalo không hỗ trợ cú pháp [text](url)).
+ * - Gỡ bỏ ngoặc vuông/ngoặc đơn thừa quanh URL.
+ * - Mã hóa ký tự gạch dưới '_' trong các đường link URL thành '%5F' (RFC 3986 percent-encoding):
+ *   Nhờ đó, trình phân tích Markdown của Zalo Server KHÔNG BAO GIỜ coi các dấu '_' trong URL
+ *   là cú pháp in nghiêng, giúp link YouTube/Web nguyên vẹn 100%, đồng thời giữ nguyên vẹn
+ *   các thẻ màu ({green}, {red}, {big}...) và in đậm (**bold**) của Zalo!
  * @param {string} text
  * @returns {string}
  */
-function formatMarkdownToZaloHtml(text) {
+function prepareZaloMarkdown(text) {
   if (!text) return '';
-  let str = String(text).trim();
+  let cleanText = String(text).trim();
 
-  // 1. Chuyển đổi mọi cú pháp Markdown link [label](url) hoặc [url](url) thành bare URL
-  str = str.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (match, label, url) => {
+  // 1. Chuyển đổi Markdown Link [label](url) thành bare URL
+  cleanText = cleanText.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (match, label, url) => {
     const cleanLabel = label.trim();
     const cleanUrl = url.trim();
     if (cleanLabel === cleanUrl || cleanLabel.startsWith('http') || /^(?:link|xem|tại đây|here|click|watch)\b/i.test(cleanLabel)) {
@@ -71,56 +75,17 @@ function formatMarkdownToZaloHtml(text) {
     }
     return `${cleanLabel}: ${cleanUrl}`;
   });
-  str = str.replace(/\[(https?:\/\/[^\s\]]+)\]/g, '$1');
-  str = str.replace(/\((https?:\/\/[^\s)]+)\)/g, ' $1 ');
 
-  // 2. Bảo vệ code blocks, inline code và URLs bằng placeholder
-  const placeholders = [];
-  const protect = (val) => {
-    const key = `___PROTECTED_${placeholders.length}___`;
-    placeholders.push({ key, value: val });
-    return key;
-  };
+  // 2. Gỡ bỏ ngoặc vuông/ngoặc đơn thừa quanh URL
+  cleanText = cleanText.replace(/\[(https?:\/\/[^\s\]]+)\]/g, '$1');
+  cleanText = cleanText.replace(/\((https?:\/\/[^\s)]+)\)/g, ' $1 ');
 
-  // Bảo vệ code blocks ```...```
-  str = str.replace(/```[\s\S]*?```/g, (match) => {
-    const code = match.replace(/^```[^\n]*\n?/, '').replace(/```$/, '');
-    const escaped = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    return protect(`<pre><code>${escaped}</code></pre>`);
+  // 3. Thay thế dấu '_' trong các đường link URL thành '%5F' để Zalo Markdown không parse nhầm thành in nghiêng
+  cleanText = cleanText.replace(/https?:\/\/[^\s]+/g, (url) => {
+    return url.replace(/_/g, '%5F');
   });
 
-  // Bảo vệ inline code `...`
-  str = str.replace(/`([^`]+)`/g, (match, code) => {
-    const escaped = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    return protect(`<code>${escaped}</code>`);
-  });
-
-  // Bảo vệ URLs
-  str = str.replace(/https?:\/\/[^\s<>"'`]+/g, (match) => protect(match));
-
-  // 3. Escape HTML entities cho nội dung thông thường
-  str = str.replace(/&/g, '&amp;');
-  str = str.replace(/</g, '&lt;');
-  str = str.replace(/>/g, '&gt;');
-
-  // 4. Chuyển đổi các thẻ Markdown sang HTML tags
-  // In đậm: **text** hoặc __text__
-  str = str.replace(/\*\*([^*\n]+)\*\*/g, '<b>$1</b>');
-  str = str.replace(/__([^_\n]+)__/g, '<b>$1</b>');
-
-  // In nghiêng: *text* hoặc _text_ (có khoảng trắng hoặc ranh giới từ bao quanh)
-  str = str.replace(/(^|[^\*])\*([^\*\n]+)\*([^\*]|$)/g, '$1<i>$2</i>$3');
-  str = str.replace(/(^|[^a-zA-Z0-9])_([^_ \n][^_\n]*[^_ \n])_([^a-zA-Z0-9]|$)/g, '$1<i>$2</i>$3');
-
-  // Gạch ngang: ~~text~~
-  str = str.replace(/~~([^~\n]+)~~/g, '<s>$1</s>');
-
-  // 5. Khôi phục lại các nội dung đã bảo vệ (URLs, code blocks)
-  for (const { key, value } of placeholders) {
-    str = str.replace(key, value);
-  }
-
-  return str;
+  return cleanText;
 }
 
 /**
@@ -134,20 +99,12 @@ async function sendMessage(chatId, text, parseMode = 'markdown') {
   const rawText = String(text || '').trim();
   if (!rawText) return null;
 
-  let effectiveParseMode = parseMode;
-  let processedText = rawText;
-
-  // Nếu parseMode là 'markdown', tự động chuyển đổi sang HTML để Zalo in đậm, in nghiêng chuẩn 100%
-  // đồng thời bảo toàn nguyên vẹn mọi đường link URL (kể cả có chứa ký tự gạch dưới '_')
-  if (parseMode === 'markdown') {
-    processedText = formatMarkdownToZaloHtml(rawText);
-    effectiveParseMode = 'html';
-  }
+  // Chuẩn hóa tin nhắn Markdown: bảo toàn link URL không bị mất dấu '_'
+  const processedText = parseMode === 'markdown' ? prepareZaloMarkdown(rawText) : rawText;
 
   // Nếu chỉ là URL thuần túy, gửi dạng text không cần parse_mode
-  if (/^https?:\/\/[^\s]+$/i.test(processedText)) {
-    effectiveParseMode = null;
-  }
+  const isPureUrl = /^https?:\/\/[^\s]+$/i.test(processedText);
+  const effectiveParseMode = isPureUrl ? null : parseMode;
 
   // Hàm thực thi gửi với cơ chế tự động fallback nếu parse_mode bị Zalo từ chối
   const doSend = async (content, mode) => {
